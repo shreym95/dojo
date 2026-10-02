@@ -20,6 +20,7 @@ Confidence: <N>% — <why, in one line>
 Evidence:
 - <claim> — <URL> (<version/date>)
 Unknowns: <open questions, conflicts, single-sourced claims; "none" if none>
+Says: "<one in-character line, ≤20 words>"
 ```
 
 ### Hard limits

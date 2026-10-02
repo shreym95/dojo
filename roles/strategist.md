@@ -38,10 +38,11 @@ Briefs are self-contained; agents do not see this conversation.
 Result: <outcome, 1-3 lines>
 Changed: <path:line — what, only if code changed>
 Verified: <cmd → result, as deltas (411 → 431)>; levi: <verdict>
+Crew: <one line per crew member used this turn, quoting their `Says:` verbatim, e.g. Levi: "<Says>">
 Caveats: <only items that change a decision>
 Need from you: <only genuine decisions; omit if none>
 ```
-Omit empty fields.
+Omit empty fields; omit `Crew:` if no crew ran. The crew's reports reach you, not the user, so `Crew:` is how the user hears them: never edit a quote or invent one. You may add a short in-character reaction to the crew lines.
 
 ### Hard limits
 - Never route planning, design or decisions to dojo:robin; she only documents.

@@ -5,13 +5,18 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { render, run } from '../scripts/build.mjs';
+import { render, run, voiceLevel } from '../scripts/build.mjs';
 
 const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { default: roster } = await import('../roster.mjs');
 
 const RULES = 'FIXTURE-HOUSE-RULES-TEXT';
-const files = { 'shared/house-rules.md': RULES };
+const files = {
+  'shared/house-rules.md': RULES,
+  'shared/voice/subtle.md': 'FIXTURE-VOICE-SUBTLE',
+  'shared/voice/medium.md': 'FIXTURE-VOICE-MEDIUM',
+  'shared/voice/full.md': 'FIXTURE-VOICE-FULL',
+};
 for (const a of Object.values(roster.agents)) {
   files[`roles/${a.role}.md`] = `ROLE BODY ${a.role}`;
   for (const p of a.personas) files[`personas/${p}.md`] = `PERSONA BODY ${p}`;
@@ -82,6 +87,61 @@ test('missing role file errors clearly', () => {
     () => render(roster, (rel) => { if (!(rel in partial)) throw Object.assign(new Error('x'), { code: 'ENOENT' }); return partial[rel]; }),
     /Missing role "qa" file: roles\/qa\.md/,
   );
+});
+
+const VOICES = { subtle: 'FIXTURE-VOICE-SUBTLE', medium: 'FIXTURE-VOICE-MEDIUM', full: 'FIXTURE-VOICE-FULL' };
+
+function assertOnlyVoice(md, level, label) {
+  for (const [name, text] of Object.entries(VOICES)) {
+    assert.equal(md.includes(text), name === level, `${label}: ${name} text ${name === level ? 'present' : 'absent'}`);
+  }
+}
+
+test('default voice is medium: only its text is inserted, between persona and house rules', () => {
+  assert.equal(roster.defaults.voice, 'medium');
+  for (const [file, md] of render(roster, readFile)) {
+    assertOnlyVoice(md, 'medium', file);
+    const v = md.indexOf(VOICES.medium);
+    assert.ok(md.lastIndexOf('PERSONA BODY') < v && v < md.indexOf(RULES), `${file}: voice sits after persona, before house rules`);
+  }
+});
+
+test('every level inserts only its own text', () => {
+  for (const level of Object.keys(VOICES)) {
+    const out = render({ ...roster, defaults: { voice: level } }, readFile);
+    for (const [file, md] of out) assertOnlyVoice(md, level, `${level}/${file}`);
+  }
+});
+
+test('per-agent voice overrides the default', () => {
+  const r = { ...roster, defaults: { voice: 'subtle' }, agents: { ...roster.agents, levi: { ...roster.agents.levi, voice: 'full' } } };
+  const out = render(r, readFile);
+  assertOnlyVoice(out.get('levi.md'), 'full', 'levi');
+  assertOnlyVoice(out.get('senku.md'), 'subtle', 'senku');
+  assert.equal(voiceLevel({}, 'x', {}), 'medium', 'falls back to medium with no defaults');
+});
+
+test('unknown voice level throws', () => {
+  assert.throws(() => render({ ...roster, defaults: { voice: 'loud' } }, readFile), /unknown voice level "loud"/);
+  const r = { ...roster, agents: { ...roster.agents, robin: { ...roster.agents.robin, voice: 'shouty' } } };
+  assert.throws(() => render(r, readFile), /agent "robin": unknown voice level "shouty"/);
+});
+
+test('missing voice file errors clearly', () => {
+  const partial = { ...files };
+  delete partial['shared/voice/medium.md'];
+  assert.throws(
+    () => render(roster, (rel) => { if (!(rel in partial)) throw Object.assign(new Error('x'), { code: 'ENOENT' }); return partial[rel]; }),
+    /Missing voice level "medium" file: shared\/voice\/medium\.md/,
+  );
+});
+
+test('real sources: crew roles end with Says, strategist has Crew', () => {
+  for (const role of ['backend', 'frontend', 'research-deep', 'research-quick', 'qa', 'docs']) {
+    const body = fs.readFileSync(path.join(REPO, `roles/${role}.md`), 'utf8');
+    assert.match(body, /\nSays: "<one in-character line, ≤20 words>"\n```/, `${role} contract ends with Says`);
+  }
+  assert.match(fs.readFileSync(path.join(REPO, 'roles/strategist.md'), 'utf8'), /\nCrew: .*`Says:` verbatim/);
 });
 
 function fixtureTree() {

@@ -24,6 +24,7 @@ Ran:
 Defects:
 - <blocker|major|minor> — <path:line> — <problem> — <repro>
 Not covered: <what you did not check or could not run>
+Says: "<one in-character line, ≤20 words>"
 ```
 
 ### Hard limits

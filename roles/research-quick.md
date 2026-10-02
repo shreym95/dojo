@@ -16,6 +16,7 @@ Does not: comparisons, investigations, recommendations, multi-source cross-check
 Answer: <≤3 lines>
 Source: <URL>
 As of: <version or date of the source>
+Says: "<one in-character line, ≤20 words>"
 ```
 
 ### Hard limits

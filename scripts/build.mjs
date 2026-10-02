@@ -28,6 +28,18 @@ export function displayName(roster, key) {
   return name;
 }
 
+export const VOICE_LEVELS = ['subtle', 'medium', 'full'];
+export const DEFAULT_VOICE = 'medium';
+
+/** Per-agent `voice` beats `roster.defaults.voice`, which beats 'medium'. Throws on an unknown level. */
+export function voiceLevel(roster, key, agent) {
+  const level = agent.voice ?? roster.defaults?.voice ?? DEFAULT_VOICE;
+  if (!VOICE_LEVELS.includes(level)) {
+    throw new Error(`agent "${key}": unknown voice level "${level}" (expected one of: ${VOICE_LEVELS.join(', ')})`);
+  }
+  return level;
+}
+
 /** Pure: roster + readFile(relPath)->string  =>  Map<'<key>.md', content>. */
 export function render(roster, readFile) {
   const read = (rel, what) => {
@@ -50,6 +62,8 @@ export function render(roster, readFile) {
     }
     const names = a.personas.map((p) => displayName(roster, p));
     const personaBodies = a.personas.map((p) => read(`personas/${p}.md`, `persona "${p}"`));
+    const level = voiceLevel(roster, key, a);
+    const voiceBody = read(`shared/voice/${level}.md`, `voice level "${level}"`);
     const roleBody = read(`roles/${a.role}.md`, `role "${a.role}"`);
 
     const front = [
@@ -74,7 +88,7 @@ export function render(roster, readFile) {
     } else {
       sections.push(personaBodies[0]);
     }
-    sections.push(houseRules, roleBody);
+    sections.push(voiceBody, houseRules, roleBody);
 
     out.set(`${key}.md`, `${front}\n\n${GENERATED}\n\n${sections.join('\n\n')}\n`);
   }

@@ -19,6 +19,7 @@ Files:
 - <path — what>
 Unverified claims: <each claim you could not check against code; "none" if none>
 Open: <missing decisions, gaps, questions; "none" if none>
+Says: "<one in-character line, ≤20 words>"
 ```
 
 ### Hard limits

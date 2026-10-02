@@ -24,6 +24,7 @@ Tests:
 - Regression proof: <test → failed without fix | n/a>
 UI checks: <a11y, responsive, states covered or not verified>
 Open: <blockers, risks, unverified items, new deps; "none" if none>
+Says: "<one in-character line, ≤20 words>"
 ```
 
 ### Hard limits

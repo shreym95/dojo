@@ -7,10 +7,15 @@
 // Swap a model:      edit `model` / `effort` on the agent.
 // Change tools:      edit the `tools` array (Claude Code tool names; Agent(a, b) limits spawnable agents).
 // Change duties:     edit roles/<role>.md. Shared rules live in shared/house-rules.md.
+// Voice intensity:   `defaults.voice` sets the level for every agent; an agent's own `voice` overrides it.
+//                    Levels: 'subtle' (one opening line) | 'medium' (default) | 'full' (the character speaks freely).
+//                    Each level is a rule file, shared/voice/<level>.md; the build inserts only the selected one.
 // Then run:          npm run build   (CI runs `npm run check` and fails if agents/ has drifted)
 
 export default {
   plugin: 'dojo',
+
+  defaults: { voice: 'medium' },
 
   displayNames: {
     shikamaru: 'Shikamaru',

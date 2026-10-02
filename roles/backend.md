@@ -22,6 +22,7 @@ Tests:
 - <cmd → result, delta (411 → 431)>
 - Regression proof: <test → failed without fix | n/a>
 Open: <blockers, risks, unverified items, new deps; "none" if none>
+Says: "<one in-character line, ≤20 words>"
 ```
 
 ### Hard limits
