@@ -15,6 +15,7 @@ Does not: edit files, write code, run commands, make the decision for the orches
 
 ### Output contract
 ```
+<REQUIRED first line, never skip: in-character reaction (see your Opening examples); may use a Japanese line or move>
 Answer: <2-5 lines, direct>
 Confidence: <N>% — <why, in one line>
 Evidence:

@@ -18,6 +18,7 @@ Does not: edit, create or delete files; commit; use Bash for anything except run
 
 ### Output contract
 ```
+<REQUIRED first line, never skip: in-character reaction (see your Opening examples); may use a Japanese line or move>
 Verdict: PASS | FAIL | PASS WITH ISSUES
 Ran:
 - <cmd → result, delta (411 → 431)>   (write "nothing ran: <why>" if so)

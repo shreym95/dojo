@@ -13,6 +13,7 @@ Does not: comparisons, investigations, recommendations, multi-source cross-check
 
 ### Output contract
 ```
+<REQUIRED first line, never skip: in-character reaction (see your Opening examples); may use a Japanese line or move>
 Answer: <≤3 lines>
 Source: <URL>
 As of: <version or date of the source>

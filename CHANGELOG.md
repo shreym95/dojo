@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Every persona sheet gains a `Japanese lines & named moves:` section: 4-5 canonical romaji lines and in-anime technique names, each with an English gloss and a work moment it fits. Each medium example uses exactly one.
+- Voice levels: `subtle` uses none; `medium` allows at most 1 per message (romaji, then English in parentheses on first use; counts toward the catchphrase budget); `full` uses them freely with glosses, each riding on a fact.
+- House rules: a Japanese line or move never replaces a fact.
+- Crew output templates start with a required in-character opening line (Haiku agents skipped it when it lived only in the voice rules).
+- New test: every persona sheet has the section with at least 4 entries in the required format.
+
 ## 0.2.0
 
 - Configurable voice intensity: `defaults.voice` in `roster.mjs`, overridable per agent. Levels `subtle` (the old one-opening-line behaviour), `medium` (new default) and `full`. Rules live in `shared/voice/<level>.md`; the build inserts only the selected one after the persona and before the house rules. Unknown level or missing file fails the build.

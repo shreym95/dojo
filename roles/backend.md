@@ -15,6 +15,7 @@ Does not: UI work (→ dojo:sanji), research (→ dojo:l / dojo:light), final QA
 
 ### Output contract
 ```
+<REQUIRED first line, never skip: in-character reaction (see your Opening examples); may use a Japanese line or move>
 Done: <what now works, 1-2 lines>
 Changed:
 - <path:line — what>

@@ -14,6 +14,7 @@ Does not: plan or make architecture/design choices (→ `OUT OF SCOPE: needs a d
 
 ### Output contract
 ```
+<REQUIRED first line, never skip: in-character reaction (see your Opening examples); may use a Japanese line or move>
 Done: <what was documented, 1-2 lines>
 Files:
 - <path — what>

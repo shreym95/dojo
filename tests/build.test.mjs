@@ -191,3 +191,21 @@ test('CLI honours --root and exit codes', (t) => {
   assert.equal(bad.status, 1);
   assert.match(bad.stderr, /Missing persona "levi" file/);
 });
+
+test('every real persona has Japanese lines & named moves with at least 4 well-formed entries', () => {
+  const keys = [...new Set(Object.values(roster.agents).flatMap((a) => a.personas))];
+  assert.equal(keys.length, 8);
+  for (const key of keys) {
+    const lines = fs.readFileSync(path.join(REPO, 'personas', `${key}.md`), 'utf8').split('\n');
+    const at = lines.indexOf('Japanese lines & named moves:');
+    assert.ok(at >= 0, `${key}: has section`);
+    const entries = [];
+    for (const l of lines.slice(at + 1)) {
+      if (l.trim() === '') break;
+      entries.push(l);
+    }
+    assert.ok(entries.length >= 4, `${key}: at least 4 entries (got ${entries.length})`);
+    for (const e of entries) assert.match(e, /^- "[^"]+" \([^()]+\) — \S.*$/, `${key}: entry format: ${e}`);
+    assert.ok(lines.length <= 55, `${key}: persona file stays within 55 lines`);
+  }
+});
