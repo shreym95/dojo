@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "dojo",
+  "description": "Anime-themed Claude Code subagents: one orchestrator and a crew of builders, researchers, a QA inspector and a docs writer.",
+  "owner": {
+    "name": "shreym95",
+    "url": "https://github.com/shreym95"
+  },
+  "plugins": [
+    {
+      "name": "dojo",
+      "description": "An orchestrator (Shikamaru or Lelouch) plus backend, frontend, research, QA and docs subagents with distinct voices.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

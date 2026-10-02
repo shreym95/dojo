@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# crew [shikamaru|lelouch] [claude args...] — launch the dojo strategist as the main-thread agent.
+set -e
+case "${1:-}" in
+  -h|--help)
+    cat <<'USAGE'
+usage: crew [shikamaru|lelouch] [claude args...]
+
+Launches `claude --agent dojo:strategist`. A leading persona name pins the
+strategist's persona (sets DOJO_STRATEGIST); otherwise one is picked at random.
+Remaining arguments are passed through to claude.
+USAGE
+    exit 0 ;;
+  shikamaru|lelouch)
+    export DOJO_STRATEGIST="$1"
+    shift ;;
+esac
+exec claude --agent dojo:strategist "$@"
