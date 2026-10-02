@@ -59,6 +59,18 @@ How loud the characters are is set in `roster.mjs`: `defaults: { voice: 'medium'
 
 At every level facts, paths, numbers and commands stay exact, and persona never reaches code, commits or files. Each crew report ends with a `Says:` line; the strategist relays them to you under `Crew:`. Level rules are in `shared/voice/`; run `npm run build` after changing a level.
 
+## dojo-fx (optional visuals)
+
+A second plugin in this marketplace, built on Claude Code's function hooks (early-access API): `/plugin install dojo-fx@dojo`. The main `dojo` plugin works without it.
+
+- **Themed spinners**: the main thread's spinner word comes from the on-duty strategist (Shikamaru: "Shadow-possessing", "Reading the board"; Lelouch: "Commanding", "Geass-ing"). A crew member's own spinner gets its emoji and verbs (🧪 Senku "Science-ing", 🧹 Levi "Scrubbing", 🌸 Robin "Deciphering"...). Verbs rotate per turn.
+- **Turn-end flair**: the line that closes a turn says "Outmaneuvered" (Shikamaru) or "Checkmated" (Lelouch).
+- **Crew band**: while any `dojo:*` subagent runs, one row each above the prompt: emoji, name, an animated frame, its task and its latest tool call (`Bash: npm test`). Gone when nobody is running.
+- **Toasts**: `🧹 Levi deployed — "Chi. Show me the mess."`, then `🧹 Levi returned` or `💀 Levi fell`.
+- **Model guard** (always on): an `agent.spawn` of any `dojo:*` type has `model` stripped, so a caller's "always pass model: sonnet" can't override an agent's own frontmatter model.
+
+The strategist is read from the `dojo: on duty: <Name>` context line; if it can't be found, `DOJO_STRATEGIST` is used, else a neutral strategist theme. Toggle features in `/config` (or `pluginConfigs` in settings): `spinners`, `turnFlair`, `band`, `toasts`, `neutralMainTheme`, all on by default. Emoji, verbs, frames and toast lines live in `fx/hooks/characters.ts`. Try it without installing: `claude --plugin-dir ./fx`. Tests: `claude plugin test fx`.
+
 ## Note
 
 Don't pass `model` when spawning dojo agents: it overrides the model set in their frontmatter.

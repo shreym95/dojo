@@ -1,7 +1,7 @@
 {
   "name": "dojo",
   "description": "Anime-themed subagents: a strategist orchestrator plus backend, frontend, research, QA and docs crew, each with its own model, tools and voice.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": {
     "name": "shreym95",
     "url": "https://github.com/shreym95"

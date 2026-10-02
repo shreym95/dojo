@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0
+
+- New optional plugin `dojo-fx` 0.1.0 (`fx/`, install with `/plugin install dojo-fx@dojo`): function hooks that add visual character. Themed spinner words (strategist pool on the main thread, emoji + verb pool per crew member on their own spinner), past-tense turn-end words, a live crew band above the prompt (emoji, animated frame, task, latest tool call), and deploy/return/fell toasts.
+- dojo-fx model guard: an `agent.spawn` of any `dojo:*` type has its `model` stripped so the agent's frontmatter model always wins (callers following a generic "always pass model: sonnet" rule had been overriding Haiku agents). Always on, independent of the visual toggles.
+- Each visual is a `userConfig` toggle (spinners, turnFlair, band, toasts, neutralMainTheme); all character data lives in `fx/hooks/characters.ts`.
+- The main `dojo` plugin's agents and personas are unchanged.
+
 ## 0.3.0
 
 - Every persona sheet gains a `Japanese lines & named moves:` section: 4-5 canonical romaji lines and in-anime technique names, each with an English gloss and a work moment it fits. Each medium example uses exactly one.

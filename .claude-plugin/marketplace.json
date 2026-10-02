@@ -12,6 +12,12 @@
       "description": "An orchestrator (Shikamaru or Lelouch) plus backend, frontend, research, QA and docs subagents with distinct voices.",
       "source": "./",
       "category": "productivity"
+    },
+    {
+      "name": "dojo-fx",
+      "description": "Optional visuals for dojo: themed spinners, turn-end flair, a live crew band, deploy/return toasts, and a guard that keeps dojo agents on their own model.",
+      "source": "./fx",
+      "category": "productivity"
     }
   ]
 }

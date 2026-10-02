@@ -1,0 +1,42 @@
+{
+  "name": "dojo-fx",
+  "description": "Optional visuals for the dojo crew: themed spinners, turn-end flair, a live crew band, deploy/return toasts, and a model guard that keeps dojo agents on their own model.",
+  "version": "0.1.0",
+  "author": {
+    "name": "shreym95",
+    "url": "https://github.com/shreym95"
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "spinners": {
+      "type": "boolean",
+      "title": "Themed spinners",
+      "description": "Replace the spinner word with the on-duty strategist's (or a crew member's) verbs.",
+      "default": true
+    },
+    "turnFlair": {
+      "type": "boolean",
+      "title": "Turn-end flair",
+      "description": "Past-tense themed word on the line that closes a turn (Outmaneuvered, Checkmated).",
+      "default": true
+    },
+    "band": {
+      "type": "boolean",
+      "title": "Crew band",
+      "description": "Show one animated row per running dojo subagent above the prompt.",
+      "default": true
+    },
+    "toasts": {
+      "type": "boolean",
+      "title": "Deploy/return toasts",
+      "description": "Toast when a dojo subagent is deployed, returns or falls.",
+      "default": true
+    },
+    "neutralMainTheme": {
+      "type": "boolean",
+      "title": "Neutral strategist theme",
+      "description": "When no strategist persona is detected, still theme the main spinner with a neutral strategist pool.",
+      "default": true
+    }
+  }
+}
