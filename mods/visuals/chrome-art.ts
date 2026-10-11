@@ -109,3 +109,18 @@ export const SOUNDS = {
 } as const
 export type Cue = keyof typeof SOUNDS
 export const CUE_GAP_MS = 500
+
+/** The usage line: labels, bar glyphs and the percentages where the color turns. Same for every persona. */
+export const USAGE_LABELS = { context: 'Chakra', stamina: 'Stamina', cost: '両' } as const
+export const USAGE_BAR = { full: '▰', empty: '▱', cells: 10, compactCells: 4 } as const
+export const USAGE_WARN_AT = 60
+export const USAGE_HOT_AT = 85
+/** Rate-limit window kind -> the short label drawn beside Stamina. */
+export const WINDOW_LABELS: Record<string, string> = { five_hour: '5h', seven_day: '7d', spend_limit: 'spend' }
+
+/** One short line at the hot threshold, by what is running out; `strategist` is for no persona on duty. */
+export const USAGE_HOT_LINES: Record<string, { context: string; stamina: string }> = {
+  shikamaru: { context: 'Mendokusē… compact soon', stamina: 'Mendokusē… ease off' },
+  lelouch: { context: 'The board narrows. Compact.', stamina: 'The clock runs short.' },
+  strategist: { context: 'Compact soon', stamina: 'Ease off' },
+}

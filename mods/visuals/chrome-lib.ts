@@ -1,7 +1,24 @@
-import { CREW, STRATEGISTS, WORDS } from '../theme'
+import { CREW, NEUTRAL, STRATEGISTS, WORDS } from '../theme'
 import { hash, pick, truncate } from '../lib/text'
-import type { DojoRosterEntry } from '../state'
-import { BAND_HEADER, DEFAULT_VOICE, FALL_LINES, FRAMES_MORE, HINTS, LONG_TURN_MS, MODELS, MODE_LABELS, TURN_LONG, VERBS_MORE } from './chrome-art'
+import type { DojoRosterEntry, DojoUsage } from '../state'
+import {
+  BAND_HEADER,
+  DEFAULT_VOICE,
+  FALL_LINES,
+  FRAMES_MORE,
+  HINTS,
+  LONG_TURN_MS,
+  MODELS,
+  MODE_LABELS,
+  TURN_LONG,
+  USAGE_BAR,
+  USAGE_HOT_AT,
+  USAGE_HOT_LINES,
+  USAGE_LABELS,
+  USAGE_WARN_AT,
+  VERBS_MORE,
+  WINDOW_LABELS,
+} from './chrome-art'
 
 // Pure helpers for visuals/chrome.tsx: width math, color, wording and the line plans the hooks draw.
 // A plan is plain data (Line[]); chrome.tsx turns it into Box and Text, because only a hook may reach the element table.
@@ -235,6 +252,93 @@ export function planBand(input: { persona: string | null; rows: readonly BandRow
   const room = maxRows - head.length - 1
   const hidden = rows.length - room
   return [...head, ...rows.slice(0, room).map(row), [{ text: `+${hidden} more`, dim: true }]]
+}
+
+// --- usage line --------------------------------------------------------------------------------------------------
+
+/** The usage figures of `session.measure` or `$.session.usage()`, cut down to what the line draws. */
+export function snapshotUsage(source: {
+  context: { percent?: number }
+  rateLimits: readonly { kind: string; percentUsed: number }[]
+  cost?: { usd: number }
+}): DojoUsage {
+  let limit: DojoUsage['limit'] = null
+  for (const w of source.rateLimits) {
+    if (Number.isFinite(w.percentUsed) && (limit === null || w.percentUsed > limit.percent)) limit = { kind: w.kind, percent: w.percentUsed }
+  }
+  const percent = source.context.percent
+  const usd = source.cost?.usd
+  return {
+    percent: percent !== undefined && Number.isFinite(percent) ? percent : null,
+    limit,
+    usd: usd !== undefined && Number.isFinite(usd) ? usd : null,
+  }
+}
+
+const clampPercent = (p: number) => Math.min(100, Math.max(0, Math.round(p)))
+
+/** `▰▰▰▱▱▱▱▱▱▱`: the bar filled up to the next whole cell. */
+export function usageBar(percent: number, cells: number): string {
+  const filled = Math.min(cells, Math.max(0, Math.ceil((clampPercent(percent) * cells) / 100)))
+  return USAGE_BAR.full.repeat(filled) + USAGE_BAR.empty.repeat(cells - filled)
+}
+
+/** The color of a figure: the strategist's below the warning mark, then the theme's warning and error colors. */
+export function usageColor(percent: number, base: string): string {
+  const p = clampPercent(percent)
+  return p >= USAGE_HOT_AT ? 'error' : p >= USAGE_WARN_AT ? 'warning' : base
+}
+
+/**
+ * The one usage row as a line, or none when no figure is known. Wide terminals get the full row, dropping the persona
+ * warning, then the cost, when they do not fit; under 50 columns it is the compact form. Never wider than `columns`.
+ */
+export function planUsage(input: { persona: string | null; usage: DojoUsage; columns: number }): Line | undefined {
+  const { usage, columns } = input
+  if (usage.percent === null && usage.limit === null && usage.usd === null) return undefined
+  const theme = (input.persona === null ? undefined : STRATEGISTS[input.persona]) ?? NEUTRAL
+  const base = legible(theme.color)
+  const lead: Seg = { text: `${theme.emoji} ` }
+  const sep: Seg = { text: ' · ', dim: true }
+  const room = Math.max(1, columns - 1)
+  const ctx = usage.percent === null ? undefined : clampPercent(usage.percent)
+  const sta = usage.limit === null ? undefined : clampPercent(usage.limit.percent)
+  const window = usage.limit === null ? '' : (WINDOW_LABELS[usage.limit.kind] ?? usage.limit.kind)
+
+  const figure = (percent: number, text: string): Seg => ({ text, color: usageColor(percent, base) })
+  const join = (parts: Line[]): Line => parts.flatMap((p, i) => (i === 0 ? p : [sep, ...p]))
+  const hot = ctx !== undefined && ctx >= USAGE_HOT_AT ? 'context' : sta !== undefined && sta >= USAGE_HOT_AT ? 'stamina' : undefined
+  const hotText = hot === undefined ? undefined : (USAGE_HOT_LINES[theme.key] ?? USAGE_HOT_LINES.strategist)?.[hot]
+
+  const full = (withCost: boolean, withHot: boolean): Line => {
+    const parts: Line[] = []
+    parts.push(
+      ctx === undefined
+        ? [{ text: `${USAGE_LABELS.context} —` }]
+        : [{ text: `${USAGE_LABELS.context} ` }, figure(ctx, usageBar(ctx, USAGE_BAR.cells)), figure(ctx, ` ${ctx}%`)],
+    )
+    if (sta !== undefined) {
+      parts.push([{ text: `${USAGE_LABELS.stamina} ` }, figure(sta, `${sta}%`), ...(window === '' ? [] : [{ text: ` (${window})`, dim: true }])])
+    }
+    if (withCost && usage.usd !== null) parts.push([{ text: `${USAGE_LABELS.cost} $${usage.usd.toFixed(2)}` }])
+    if (withHot && hotText !== undefined) parts.push([{ text: hotText, color: 'error', italic: true }])
+    return [lead, ...join(parts)]
+  }
+
+  const compact = (): Line => {
+    const parts: Line[] = []
+    parts.push(ctx === undefined ? [{ text: '—' }] : [figure(ctx, usageBar(ctx, USAGE_BAR.compactCells)), figure(ctx, ` ${ctx}%`)])
+    if (sta !== undefined) parts.push([figure(sta, `${sta}%`)])
+    return [lead, ...join(parts)]
+  }
+
+  const width = (line: Line) => line.reduce((n, s) => n + cellWidth(s.text), 0)
+  if (columns >= 50) {
+    for (const line of [full(true, true), full(true, false), full(false, false)]) {
+      if (width(line) <= room) return line
+    }
+  }
+  return clipLine(compact(), room)
 }
 
 // --- roster pane -------------------------------------------------------------------------------------------------

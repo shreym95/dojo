@@ -7,7 +7,7 @@ import { crewKey, strategistKey } from '../lib/persona'
 import { summarizeTool } from '../lib/text'
 import { CREW, FELL_EMOJI, NEUTRAL, STRATEGISTS, WORDS } from '../theme'
 import type { Theme, Words } from '../theme'
-import type { DojoBand, DojoCrewRow, DojoRosterEntry } from '../state'
+import type { DojoBand, DojoCrewRow, DojoRosterEntry, DojoUsage } from '../state'
 import { CUE_GAP_MS, DEPLOY_MORE, SOUNDS } from './chrome-art'
 import type { Cue } from './chrome-art'
 import {
@@ -16,8 +16,10 @@ import {
   hintTail,
   parseSays,
   planBand,
+  planUsage,
   rosterLines,
   rosterText,
+  snapshotUsage,
   themedModes,
   turnWord,
   verbAt,
@@ -36,6 +38,7 @@ const tools = atom({ plugin: 'dojo', key: 'tools' } as const, {} as Record<strin
 const roster = atom({ plugin: 'dojo', key: 'roster' } as const, {} as Record<string, DojoRosterEntry>)
 const pulse = atom({ plugin: 'dojo', key: 'pulse' } as const, 0)
 const cueAt = atom({ plugin: 'dojo', key: 'cueAt' } as const, null as number | null)
+const usage = atom({ plugin: 'dojo', key: 'usage' } as const, null as DojoUsage | null)
 
 const TICK_MS = 250
 const PULSE_MS = 400
@@ -362,20 +365,55 @@ export const installChrome: Installer = (on, options) => {
     return word === undefined ? next(e) : next({ ...e, props: { ...e.props, word } })
   })
 
+  // The latest session figures for the usage line; the engine pushes them, the band hook below draws them.
+  on('session.measure', async ($, e, next) => {
+    const ran = await next(e)
+    if (isOn(options, 'usageLine')) {
+      try {
+        const figures = snapshotUsage(e)
+        await update($, usage, () => figures)
+      } catch {
+        // the usage line is a garnish
+      }
+    }
+    return ran
+  })
+
+  // One usage row first (when on and known), then the crew band below it.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    if (!isOn(options, 'band') || e.props.hasSurvey) return next(e)
+    const wantBand = isOn(options, 'band')
+    const wantUsage = isOn(options, 'usageLine')
+    if ((!wantBand && !wantUsage) || e.props.hasSurvey) return next(e)
     let tree: RenderElement | undefined
     try {
-      const { frame, rows } = await read($, band)
-      if (rows.length > 0) {
+      const persona = await personaKey($)
+      const columns = e.props.bodyColumns
+      const bandState = wantBand ? await read($, band) : undefined
+      const crewOut = bandState !== undefined && bandState.rows.length > 0
+      // with a single row to spare the crew band keeps it
+      let usageRow: Line | undefined
+      if (wantUsage && !(crewOut && e.props.maxRows < 2)) {
+        try {
+          usageRow = planUsage({ persona, usage: (await read($, usage)) ?? snapshotUsage(await $.session.usage()), columns })
+        } catch {
+          usageRow = undefined
+        }
+      }
+      let lines: Line[] = usageRow === undefined ? [] : [usageRow]
+      if (bandState !== undefined && crewOut) {
         const latest = await read($, tools)
-        const lines = planBand({
-          persona: await personaKey($),
-          rows: rows.map(r => ({ key: r.key, description: r.description, tool: latest[r.id] })),
-          frame,
-          columns: e.props.bodyColumns,
-          maxRows: e.props.maxRows,
-        })
+        lines = [
+          ...lines,
+          ...planBand({
+            persona,
+            rows: bandState.rows.map(r => ({ key: r.key, description: r.description, tool: latest[r.id] })),
+            frame: bandState.frame,
+            columns,
+            maxRows: e.props.maxRows - lines.length,
+          }),
+        ]
+      }
+      if (lines.length > 0) {
         const { Box, Text } = $.ui.resolve(e)
         tree = <Box flexDirection="column">{lines.map((l, i) => drawLine(Text, l, `band-${i}`))}</Box>
       }

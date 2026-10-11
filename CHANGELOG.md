@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1
+
+- Session usage line: one row above the prompt with the context fill (Chakra, a 10-cell bar), the busiest rate-limit window (Stamina, with its window such as 5h) and the session cost (両 $1.42), led by the on-duty strategist's emoji. The bar uses the strategist's color below 60%, the warning color from 60% and the error color from 85%, where a short line in the strategist's voice is added. Segments with no data are left out; under 50 columns the row is compact. The crew band draws below it.
+- New `userConfig` toggle `usageLine` (on by default).
+
 ## 0.5.0
 
 - dojo-fx plugin merged into the main dojo plugin: all visuals (themed spinners, turn-end flair, crew band, transcript theme, banners, prompt chrome, roster pane, toasts, sounds) are now built-in as a function-hooks module in `mods/`, loaded via `hooks/hooks.json`. No separate installation required; install `dojo` gives everything.

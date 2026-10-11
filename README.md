@@ -74,13 +74,14 @@ Built on Claude Code's function hooks (early-access API), the dojo plugin includ
 - **Themed spinners**: the main thread's spinner word comes from the on-duty strategist (Shikamaru: "Shadow-possessing", "Reading the board"; Lelouch: "Commanding", "Geass-ing"). A crew member's own spinner gets its emoji and verbs (🧪 Senku "Science-ing", 🧹 Levi "Scrubbing", 🌸 Robin "Deciphering"...). Verbs rotate per turn.
 - **Turn-end flair**: the line that closes a turn says "Outmaneuvered" (Shikamaru) or "Checkmated" (Lelouch).
 - **Crew band**: while any `dojo:*` subagent runs, one row each above the prompt: emoji, name, an animated frame, its task and its latest tool call (`Bash: npm test`). Gone when nobody is running.
+- **Session usage line**: one row above the prompt that shows where the session is heading: `🦌 Chakra ▰▰▰▰▰▰▱▱▱▱ 58% · Stamina 23% (5h) · 両 $1.42`. Chakra is the context window's fill, Stamina the busiest rate-limit window (subscriptions only), and the last figure the session cost. The bar takes the strategist's color, turns to the warning color from 60% and to the error color from 85%, where a short line from the strategist is added. A segment with no data is left out, and under 50 columns the row shrinks to `🦌 ▰▰▰▱ 58% · 23%`. The crew band draws below it.
 - **Transcript theme**: persona frames on messages, tool badges, crew cards and speech bubbles in the on-duty character's colors.
 - **ASCII banners**: shown when a dojo subagent is deployed and when it returns.
 - **Prompt chrome**: themed prompt area with persona hints under the prompt and session mode labels.
 - **Roster pane**: `/dojo` shows the crew, who is on duty and who is running.
 - **Deploy/return toasts and sounds**: `🧹 Levi deployed — "Chi. Show me the mess."`, then `🧹 Levi returned` or `💀 Levi fell`. Sound cues play on macOS only (via `afplay`).
 
-Toggle features in `/config` (or `pluginConfigs` in settings): `spinners`, `turnFlair`, `band`, `toasts`, `neutralMainTheme`, `transcriptTheme`, `banners`, `promptChrome`, `rosterPane`, `sounds`, all on by default.
+Toggle features in `/config` (or `pluginConfigs` in settings): `spinners`, `turnFlair`, `band`, `usageLine`, `toasts`, `neutralMainTheme`, `transcriptTheme`, `banners`, `promptChrome`, `rosterPane`, `sounds`, all on by default.
 
 ## Guards and gates
 
@@ -104,6 +105,7 @@ Every setting below lives in the `userConfig` section of the plugin and can be t
 | `spinners` | true | Replace the spinner word with the on-duty strategist's (or crew member's) themed verbs. |
 | `turnFlair` | true | Past-tense themed word on the line that closes a turn (Outmaneuvered, Checkmated). |
 | `band` | true | Show one animated row per running dojo subagent above the prompt. |
+| `usageLine` | true | Show one row above the prompt with the session's context fill (Chakra), the busiest rate-limit window (Stamina) and the cost. |
 | `toasts` | true | Toast when a dojo subagent is deployed, returns or falls. |
 | `neutralMainTheme` | true | When no strategist persona is detected, still theme the main spinner with a neutral strategist pool. |
 | `commitGate` | true | Force the configured commit trailer into git texts and deny git commit commands whose inline message breaks the commit rules (Conventional Commits subject, no body, exact trailer). Applies in every session. |

@@ -1,7 +1,7 @@
 {
   "name": "dojo",
   "description": "Anime-themed subagents: a strategist orchestrator plus backend, frontend, research, QA and docs crew, each with its own model, tools and voice. Includes optional visuals (themed spinners, crew band, toasts, transcript theme, banners, roster pane, sounds) and guards (model, commit message, delegation budgets, compaction memory).",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "author": {
     "name": "shreym95",
     "url": "https://github.com/shreym95"
@@ -36,6 +36,12 @@
       "type": "boolean",
       "title": "Crew band",
       "description": "Show one animated row per running dojo subagent above the prompt.",
+      "default": true
+    },
+    "usageLine": {
+      "type": "boolean",
+      "title": "Session usage line",
+      "description": "Show one row above the prompt with the session's context fill (Chakra), the busiest rate-limit window (Stamina) and the cost.",
       "default": true
     },
     "toasts": {

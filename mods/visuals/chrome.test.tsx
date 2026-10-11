@@ -8,8 +8,8 @@ import { agent, slash, spawnInput } from '../lib/testkit'
 import { truncate } from '../lib/text'
 import { CREW, STRATEGISTS, WORDS } from '../theme'
 import { bandLine } from './chrome'
-import { BAND_HEADER, CUE_GAP_MS, DEPLOY_MORE, FALL_LINES, HINTS, LONG_TURN_MS, MODELS, SOUNDS, TURN_LONG, VERBS_MORE } from './chrome-art'
-import { cellWidth, clip, framesOf, legible, modelLabel, parseSays, planBand, rosterLines, themedModes, verbAt } from './chrome-lib'
+import { BAND_HEADER, CUE_GAP_MS, DEPLOY_MORE, FALL_LINES, HINTS, LONG_TURN_MS, MODELS, SOUNDS, TURN_LONG, USAGE_HOT_LINES, VERBS_MORE } from './chrome-art'
+import { cellWidth, clip, framesOf, legible, modelLabel, parseSays, planBand, planUsage, rosterLines, themedModes, usageBar, verbAt } from './chrome-lib'
 
 const PLUGIN = 'dojo'
 
@@ -420,6 +420,213 @@ describe('band, themed', () => {
     const ui = await mountBand($)
     expect((await ui.findAll({ type: 'Text' })).map(t => t.text)).toEqual(['ENGINE-BAND'])
     await ui.unmount()
+  })
+})
+
+describe('usage line', () => {
+  type Figures = { percent?: number; limits?: [string, number][]; usd?: number }
+  const measure = (f: Figures) => ({
+    context: { window: 200_000, ...(f.percent === undefined ? {} : { percent: f.percent, tokens: f.percent * 2000 }) },
+    rateLimits: (f.limits ?? []).map(([kind, percentUsed]) => ({ kind, percentUsed })),
+    ...(f.usd === undefined ? {} : { cost: { usd: f.usd } }),
+    changed: ['context' as const],
+  })
+  // the engine beneath answers a measurement by echoing which units moved
+  const usageWorld = (on: On, opts: Parameters<typeof world>[1] = {}) => {
+    on('session.measure', (_$, e) => ({ changed: e.changed }))
+    return world(on, opts)
+  }
+  const mountBand = ($: Engine, props: Record<string, unknown> = {}, surface: 'terminal' | 'desktop' = 'terminal') =>
+    $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: { ...BAND_PROPS, ...props } as never })
+  const bottomBand = (on: On) => on('ui.render', { component: 'AbovePrompt' }, ($, e) => $.ui.resolve(e).Text({ children: 'ENGINE-BAND' }))
+  /** The row as the plugin drew it: the outer Text's text and each colored run. */
+  const rowOf = async (ui: Awaited<ReturnType<typeof mountBand>>, i = 0) => {
+    const outer = (await ui.findAll({ type: 'Text' })).filter(t => t.props.wrap === 'truncate-end')[i]
+    return outer
+  }
+  const runs = async (ui: Awaited<ReturnType<typeof mountBand>>) =>
+    (await ui.findAll({ type: 'Text' })).filter(t => t.props.wrap !== 'truncate-end').map(t => [t.text, t.props.color] as const)
+  const textsOf = async (ui: Awaited<ReturnType<typeof mountBand>>) =>
+    (await ui.findAll({ type: 'Text' })).filter(t => t.props.wrap === 'truncate-end' || t.text === 'ENGINE-BAND').map(t => t.text)
+
+  const draw = async ($: Engine, on: On, f: Figures, props: Record<string, unknown> = {}, env: Record<string, string> = { DOJO_STRATEGIST: 'shikamaru' }) => {
+    usageWorld(on, { env })
+    bottomBand(on)
+    await $.session.measure(measure(f) as never)
+    return mountBand($, props)
+  }
+
+  test('the full line: persona emoji, Chakra bar, Stamina with its window, cost', async ($, on) => {
+    const ui = await draw($, on, { percent: 58, limits: [['five_hour', 23]], usd: 1.42 })
+    expect(await textsOf(ui)).toEqual(['🦌 Chakra ▰▰▰▰▰▰▱▱▱▱ 58% · Stamina 23% (5h) · 両 $1.42'])
+    expect(await runs(ui)).toContainEqual(['▰▰▰▰▰▰▱▱▱▱', '#5B8C5A'])
+    await ui.unmount()
+  })
+
+  test('the neutral emoji when no persona is on duty; the most-used window wins', async ($, on) => {
+    const ui = await draw($, on, { percent: 10, limits: [['five_hour', 23.4], ['seven_day', 61.6], ['spend_limit', 2]] }, {}, {})
+    expect(await textsOf(ui)).toEqual(['🎴 Chakra ▰▱▱▱▱▱▱▱▱▱ 10% · Stamina 62% (7d)'])
+    await ui.unmount()
+  })
+
+  test('a segment with no data is left out', async ($, on) => {
+    const noLimits = await draw($, on, { percent: 58, usd: 1.42 })
+    expect(await textsOf(noLimits)).toEqual(['🦌 Chakra ▰▰▰▰▰▰▱▱▱▱ 58% · 両 $1.42'])
+    await noLimits.unmount()
+  })
+
+  test('no cost: no ryō segment', async ($, on) => {
+    const ui = await draw($, on, { percent: 58, limits: [['five_hour', 23]] })
+    expect(await textsOf(ui)).toEqual(['🦌 Chakra ▰▰▰▰▰▰▱▱▱▱ 58% · Stamina 23% (5h)'])
+    await ui.unmount()
+  })
+
+  test('context fill not known yet: Chakra —', async ($, on) => {
+    const ui = await draw($, on, { limits: [['five_hour', 23]], usd: 0.5 })
+    expect(await textsOf(ui)).toEqual(['🦌 Chakra — · Stamina 23% (5h) · 両 $0.50'])
+    await ui.unmount()
+  })
+
+  test('nothing known: no row, the engine band stays', async ($, on) => {
+    const ui = await draw($, on, {})
+    expect(await textsOf(ui)).toEqual(['ENGINE-BAND'])
+    await ui.unmount()
+  })
+
+  test('colors: strategist below 60, warning to 84, error from 85, with the persona line at 85', async ($, on) => {
+    usageWorld(on, { env: { DOJO_STRATEGIST: 'shikamaru' } })
+    bottomBand(on)
+    const cases: [number, string, string | undefined][] = [
+      [59, '#5B8C5A', undefined],
+      [60, 'warning', undefined],
+      [84, 'warning', undefined],
+      [85, 'error', USAGE_HOT_LINES.shikamaru?.context],
+      [100, 'error', USAGE_HOT_LINES.shikamaru?.context],
+    ]
+    for (const [percent, color, line] of cases) {
+      await $.session.measure(measure({ percent }) as never)
+      const ui = await mountBand($)
+      const bar = (await runs(ui)).find(([t]) => t.startsWith('▰') || t.startsWith('▱'))
+      expect(bar?.[1], `${percent}%`).toBe(color)
+      const text = (await textsOf(ui))[0] ?? ''
+      if (line === undefined) expect(text).not.toContain('Mendokus')
+      else expect(text.endsWith(` · ${line}`), text).toBe(true)
+      await ui.unmount()
+    }
+  })
+
+  test('Stamina has the same thresholds, and its own line', async ($, on) => {
+    usageWorld(on, { env: { DOJO_STRATEGIST: 'lelouch' } })
+    bottomBand(on)
+    await $.session.measure(measure({ percent: 20, limits: [['five_hour', 90]] }) as never)
+    const ui = await mountBand($)
+    expect(await runs(ui)).toContainEqual(['90%', 'error'])
+    expect(await runs(ui)).toContainEqual(['▰▰▱▱▱▱▱▱▱▱', legible(STRATEGISTS.lelouch?.color ?? '')])
+    expect((await textsOf(ui))[0]).toBe(`♟️ Chakra ▰▰▱▱▱▱▱▱▱▱ 20% · Stamina 90% (5h) · ${USAGE_HOT_LINES.lelouch?.stamina}`)
+    await ui.unmount()
+  })
+
+  test('the neutral persona has its own hot line', async ($, on) => {
+    const ui = await draw($, on, { percent: 92 }, {}, {})
+    expect((await textsOf(ui))[0]).toBe('🎴 Chakra ▰▰▰▰▰▰▰▰▰▰ 92% · Compact soon')
+    await ui.unmount()
+  })
+
+  test('narrow: the compact form, inside the columns', async ($, on) => {
+    const ui = await draw($, on, { percent: 58, limits: [['five_hour', 23]], usd: 1.42 }, { bodyColumns: 40 })
+    expect(await textsOf(ui)).toEqual(['🦌 ▰▰▰▱ 58% · 23%'])
+    await ui.unmount()
+    for (const columns of [49, 30, 12, 6, 2]) {
+      const again = await mountBand($, { bodyColumns: columns })
+      const rows = await textsOf(again)
+      expect(rows.length).toBe(1)
+      for (const r of rows) expect(cellWidth(r), `${columns}`).toBeLessThanOrEqual(columns)
+      await again.unmount()
+    }
+  })
+
+  test('mid width drops the warning, then the cost, before the compact form', async ($, on) => {
+    const ui = await draw($, on, { percent: 90, limits: [['five_hour', 23]], usd: 1.42 }, { bodyColumns: 100 })
+    expect(await textsOf(ui)).toEqual(['🦌 Chakra ▰▰▰▰▰▰▰▰▰▱ 90% · Stamina 23% (5h) · 両 $1.42 · Mendokusē… compact soon'])
+    await ui.unmount()
+    const noHot = await mountBand($, { bodyColumns: 70 })
+    expect(await textsOf(noHot)).toEqual(['🦌 Chakra ▰▰▰▰▰▰▰▰▰▱ 90% · Stamina 23% (5h) · 両 $1.42'])
+    await noHot.unmount()
+    const noCost = await mountBand($, { bodyColumns: 54 })
+    expect(await textsOf(noCost)).toEqual(['🦌 Chakra ▰▰▰▰▰▰▰▰▰▱ 90% · Stamina 23% (5h)'])
+    await noCost.unmount()
+  })
+
+  test('the crew band still draws below the usage row, in what room is left', async ($, on) => {
+    const w = usageWorld(on, { env: { DOJO_STRATEGIST: 'shikamaru' } })
+    w.setAgents([agent('ag-1', 'dojo:levi', 'running', 'QA the cart')])
+    bottomBand(on)
+    await $.session.measure(measure({ percent: 58, usd: 1.42 }) as never)
+    await $.agent.spawn(spawnInput('dojo:levi', undefined, 'QA the cart'))
+    const ui = await mountBand($)
+    expect(await textsOf(ui)).toEqual(['🦌 Chakra ▰▰▰▰▰▰▱▱▱▱ 58% · 両 $1.42', '🦌 Shadow formation: 1 deployed ◐', '🧹 Levi ⚔ QA the cart'])
+    await ui.unmount()
+    // one row to spare: the crew keeps it
+    const tight = await mountBand($, { maxRows: 1 })
+    expect(await textsOf(tight)).toEqual(['🦌 1 out 🧹'])
+    await tight.unmount()
+  })
+
+  test('before any measurement the line is seeded from the session usage', async ($, on) => {
+    usageWorld(on, { env: { DOJO_STRATEGIST: 'shikamaru' } })
+    bottomBand(on)
+    on('session.usage', () => ({ value: { startedAt: 0, ...measure({ percent: 30, limits: [['five_hour', 5]], usd: 0.1 }) } }) as never)
+    const ui = await mountBand($)
+    expect(await textsOf(ui)).toEqual(['🦌 Chakra ▰▰▰▱▱▱▱▱▱▱ 30% · Stamina 5% (5h) · 両 $0.10'])
+    await ui.unmount()
+  })
+
+  test('desktop draws the same row', async ($, on) => {
+    usageWorld(on, { env: { DOJO_STRATEGIST: 'shikamaru' } })
+    bottomBand(on)
+    await $.session.measure(measure({ percent: 58 }) as never)
+    const ui = await mountBand($, {}, 'desktop')
+    expect(await textsOf(ui)).toEqual(['🦌 Chakra ▰▰▰▰▰▰▱▱▱▱ 58%'])
+    await ui.unmount()
+  })
+
+  test('a survey in the band: the engine band', async ($, on) => {
+    const ui = await draw($, on, { percent: 58 }, { hasSurvey: true })
+    expect(await textsOf(ui)).toEqual(['ENGINE-BAND'])
+    await ui.unmount()
+  })
+
+  test('a usage lookup that throws leaves the engine band', async ($, on) => {
+    usageWorld(on)
+    bottomBand(on)
+    on('session.usage', () => {
+      throw new Error('no ledger')
+    })
+    const ui = await mountBand($)
+    expect(await textsOf(ui)).toEqual(['ENGINE-BAND'])
+    await ui.unmount()
+  })
+
+  test('usageLine off: unchanged, with or without crew', { options: { usageLine: false } }, async ($, on) => {
+    const w = usageWorld(on, { env: { DOJO_STRATEGIST: 'shikamaru' } })
+    w.setAgents([agent('ag-1', 'dojo:levi', 'running', 'QA the cart')])
+    bottomBand(on)
+    await $.session.measure(measure({ percent: 58, usd: 1.42 }) as never)
+    const plain = await mountBand($)
+    expect(await textsOf(plain)).toEqual(['ENGINE-BAND'])
+    await plain.unmount()
+    await $.agent.spawn(spawnInput('dojo:levi', undefined, 'QA the cart'))
+    const ui = await mountBand($)
+    expect(await textsOf(ui)).toEqual(['🦌 Shadow formation: 1 deployed ◐', '🧹 Levi ⚔ QA the cart'])
+    await ui.unmount()
+  })
+
+  test('helpers: the bar rounds up to a cell, clamps, and the plan is empty when nothing is known', () => {
+    expect(usageBar(0, 10)).toBe('▱▱▱▱▱▱▱▱▱▱')
+    expect(usageBar(1, 10)).toBe('▰▱▱▱▱▱▱▱▱▱')
+    expect(usageBar(130, 4)).toBe('▰▰▰▰')
+    expect(usageBar(-5, 4)).toBe('▱▱▱▱')
+    expect(planUsage({ persona: null, usage: { percent: null, limit: null, usd: null }, columns: 80 })).toBeUndefined()
   })
 })
 

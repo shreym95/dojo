@@ -4,6 +4,12 @@ export type DojoBudget = { files: string[]; lookups: number }
 export type DojoCrewRow = { id: string; key: string; description: string }
 export type DojoBand = { frame: number; rows: DojoCrewRow[] }
 export type DojoRosterEntry = { status: 'running' | 'returned' | 'fell'; count: number; task: string; says?: string }
+/** The figures the usage line draws: context fill percent, the most-used rate-limit window, session cost in US dollars. */
+export type DojoUsage = {
+  percent: number | null
+  limit: { kind: string; percent: number } | null
+  usd: number | null
+}
 
 declare module 'claude-code' {
   interface PluginState {
@@ -33,6 +39,8 @@ declare module 'claude-code' {
       pulse: number
       /** When the last sound cue played (ms on the plugin clock), or null. */
       cueAt: number | null
+      /** Latest session.measure figures for the usage line, or null before the first measurement. */
+      usage: DojoUsage | null
 
       // --- visuals/transcript.tsx: add its state keys below this line ---
       /** tool_use_id of a call a subagent made -> its crew key (`-` for a subagent that is no dojo crew). */
