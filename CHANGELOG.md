@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0
+
+- dojo-fx plugin merged into the main dojo plugin: all visuals (themed spinners, turn-end flair, crew band, transcript theme, banners, prompt chrome, roster pane, toasts, sounds) are now built-in as a function-hooks module in `mods/`, loaded via `hooks/hooks.json`. No separate installation required; install `dojo` gives everything.
+- Visual toggles now in `userConfig`: `spinners`, `turnFlair`, `band`, `toasts`, `neutralMainTheme`, `transcriptTheme`, `banners`, `promptChrome`, `rosterPane`, `sounds` (all on by default).
+- New guards and gates in `userConfig`: `commitGate` (Conventional Commits enforcement, always applies), `roleGuard` (delegation budgets for the main thread: 2 files / 6 lines / 3 lookups per turn), `archivist` (keep on-duty and voice level in compaction summaries).
+- Three `/slash` commands: `/dojo-duty [shikamaru|lelouch]` (show/set strategist), `/dojo-voice [subtle|medium|full|default|reset|off]` (show/set voice level), `/dojo` (show roster pane).
+- Model guard now always on: `agent.spawn` of any `dojo:*` type has `model` stripped.
+- **Migration**: if you had `dojo-fx` installed, uninstall it with `/plugin uninstall dojo-fx@dojo`. The merged plugin will not run its visuals twice.
+
 ## 0.4.0
 
 - New optional plugin `dojo-fx` 0.1.0 (`fx/`, install with `/plugin install dojo-fx@dojo`): function hooks that add visual character. Themed spinner words (strategist pool on the main thread, emoji + verb pool per crew member on their own spinner), past-tense turn-end words, a live crew band above the prompt (emoji, animated frame, task, latest tool call), and deploy/return/fell toasts.

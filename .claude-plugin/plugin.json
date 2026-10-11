@@ -1,7 +1,7 @@
 {
   "name": "dojo",
-  "description": "Anime-themed subagents: a strategist orchestrator plus backend, frontend, research, QA and docs crew, each with its own model, tools and voice.",
-  "version": "0.4.0",
+  "description": "Anime-themed subagents: a strategist orchestrator plus backend, frontend, research, QA and docs crew, each with its own model, tools and voice. Includes optional visuals (themed spinners, crew band, toasts, transcript theme, banners, roster pane, sounds) and guards (model, commit message, delegation budgets, compaction memory).",
+  "version": "0.5.0",
   "author": {
     "name": "shreym95",
     "url": "https://github.com/shreym95"
@@ -18,5 +18,110 @@
         ]
       }
     ]
-  }
+  },
+  "userConfig": {
+    "spinners": {
+      "type": "boolean",
+      "title": "Themed spinners",
+      "description": "Replace the spinner word with the on-duty strategist's (or a crew member's) verbs.",
+      "default": true
+    },
+    "turnFlair": {
+      "type": "boolean",
+      "title": "Turn-end flair",
+      "description": "Past-tense themed word on the line that closes a turn (Outmaneuvered, Checkmated).",
+      "default": true
+    },
+    "band": {
+      "type": "boolean",
+      "title": "Crew band",
+      "description": "Show one animated row per running dojo subagent above the prompt.",
+      "default": true
+    },
+    "toasts": {
+      "type": "boolean",
+      "title": "Deploy/return toasts",
+      "description": "Toast when a dojo subagent is deployed, returns or falls.",
+      "default": true
+    },
+    "neutralMainTheme": {
+      "type": "boolean",
+      "title": "Neutral strategist theme",
+      "description": "When no strategist persona is detected, still theme the main spinner with a neutral strategist pool.",
+      "default": true
+    },
+    "commitGate": {
+      "type": "boolean",
+      "title": "Commit gate",
+      "description": "Force the configured commit trailer into git texts and deny git commit commands whose inline message breaks the commit rules (Conventional Commits subject, no body, exact trailer). Applies in every session.",
+      "default": true
+    },
+    "commitTrailer": {
+      "type": "string",
+      "title": "Commit trailer",
+      "description": "The exact Co-Authored-By line commits must carry. Empty keeps Claude Code's own text and skips the trailer check.",
+      "default": "Co-Authored-By: Claude"
+    },
+    "roleGuard": {
+      "type": "boolean",
+      "title": "Delegation budgets",
+      "description": "In a dojo session, cap the main thread's inline edits and web lookups per turn and point it at dojo:senku, dojo:sanji, dojo:l or dojo:light.",
+      "default": true
+    },
+    "inlineEditFiles": {
+      "type": "number",
+      "title": "Inline edit files per turn",
+      "description": "Distinct files the main thread may edit itself in one turn before it must delegate.",
+      "default": 2
+    },
+    "inlineEditLines": {
+      "type": "number",
+      "title": "Inline edit lines",
+      "description": "Largest Edit (lines in new_string) the main thread may make itself.",
+      "default": 6
+    },
+    "inlineLookups": {
+      "type": "number",
+      "title": "Inline lookups per turn",
+      "description": "WebSearch and WebFetch calls the main thread may make itself in one turn before it must delegate.",
+      "default": 3
+    },
+    "archivist": {
+      "type": "boolean",
+      "title": "Compaction memory",
+      "description": "In a dojo session, tell the compaction summary to keep the on-duty line, the voice level, running dojo agents with their tasks, and the user's decisions.",
+      "default": true
+    },
+    "transcriptTheme": {
+      "type": "boolean",
+      "title": "Themed transcript",
+      "description": "Frame messages, tool calls and subagent results in the on-duty character's colors: persona frames on messages, tool badges, crew cards and speech bubbles.",
+      "default": true
+    },
+    "banners": {
+      "type": "boolean",
+      "title": "ASCII banners",
+      "description": "Show an ASCII banner when a dojo subagent is deployed and when it returns.",
+      "default": true
+    },
+    "promptChrome": {
+      "type": "boolean",
+      "title": "Prompt chrome",
+      "description": "Theme the prompt area: persona hints under the prompt and the session mode line.",
+      "default": true
+    },
+    "rosterPane": {
+      "type": "boolean",
+      "title": "Roster pane",
+      "description": "Show the /dojo roster panel: the crew, who is on duty and who is running.",
+      "default": true
+    },
+    "sounds": {
+      "type": "boolean",
+      "title": "Sound cues",
+      "description": "Play a sound cue when a dojo subagent is deployed, returns or fails.",
+      "default": true
+    }
+  },
+  "types": "./mods/state.d.ts"
 }

@@ -12,3 +12,6 @@ jobs:
           node-version: 22
       - run: node scripts/build.mjs --check
       - run: node --test
+      - run: npm install --global @anthropic-ai/claude-code@2.1.296
+      - run: claude plugin validate .
+      - run: claude plugin test .
