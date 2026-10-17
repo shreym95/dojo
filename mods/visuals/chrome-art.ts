@@ -1,4 +1,4 @@
-// Data for visuals/chrome.tsx: extra animation frames, verbs, lines, hints, mode labels, roster facts and sound files.
+// Data for visuals/chrome.tsx: extra animation frames, verbs, toast lines, roster facts and sound files.
 // Keyed like mods/theme.ts. The base verbs, frames and deploy lines stay in WORDS; everything here extends them.
 
 /** Frames appended to WORDS[key].frames, so the first four stay as they were. Single-width glyphs only. */
@@ -14,27 +14,30 @@ export const FRAMES_MORE: Record<string, readonly string[]> = {
   robin: ['❃', '❋', '✺', '❀'],
 }
 
+/** Most terminal cells a spinner verb may take, so the line it sits on is never pushed. */
+export const VERB_CELLS = 22
+
 /** Spinner verbs added after WORDS[key].verbs. The first verb of a turn always comes from WORDS; these rotate in later. */
 export const VERBS_MORE: Record<string, readonly string[]> = {
-  shikamaru: ['Counting the moves', 'Finding the cheap line', 'Watching the clouds', 'Patching the formation', 'Muttering "troublesome"', 'Cutting scope creep'],
+  shikamaru: ['Counting the moves', 'Finding the cheap line', 'Watching the clouds', 'Patching the formation', 'Muttering "drag"', 'Cutting scope creep'],
   lelouch: ['Issuing commands', 'Naming the sacrifice', 'Checking the last move', 'Moving the Knight', 'Staging the checkmate', 'Naming the contingency'],
   strategist: ['Weighing the plan', 'Splitting the work', 'Checking the last move'],
-  senku: ['Measuring everything', 'Running the experiment', 'Crafting from raw materials', 'Reading the data', 'Revival-Fluiding', 'Citing ten billion percent'],
+  senku: ['Measuring everything', 'Running the experiment', 'Crafting from scratch', 'Reading the data', 'Revival-Fluiding', 'Ten billion percent!'],
   sanji: ['Trimming the waste', 'Plating the layout', 'Reducing the sauce', 'Setting the table', 'Flambéing', 'Clearing the clutter'],
-  l: ['Ranking the witnesses', 'Cross-checking sources', 'Stating the probability', 'Naming the suspect', 'Following a lead'],
+  l: ['Ranking the witnesses', 'Cross-checking sources', 'Stating the odds', 'Naming the suspect', 'Following a lead'],
   light: ['Picking one source', 'Dating the answer', 'Answering in one line', 'Naming the source', 'Closing the notebook'],
-  levi: ['Wiping every surface', 'Grading the dirt', 'Sweeping the edge cases', 'Finding the dirty corner', 'Running the checks'],
-  robin: ['Restoring the inscription', 'Recording the history', 'Sprouting extra arms', 'Correcting the record', 'Reading on'],
+  levi: ['Wiping every surface', 'Grading the dirt', 'Sweeping edge cases', 'Hunting dirty corners', 'Running the checks'],
+  robin: ['Restoring inscriptions', 'Recording the history', 'Sprouting extra arms', 'Correcting the record', 'Reading on'],
 }
 
 /** Deploy toast lines after WORDS[key].deploy (which is always the first one). */
 export const DEPLOY_MORE: Record<string, readonly string[]> = {
-  senku: ['Get excited!', "Let's get building.", 'This is exhilarating!', 'Fresh variables!'],
-  sanji: ['Order up.', 'Leave the rest to me.', 'The plate will be flawless.', 'Every guest served.'],
-  l: ['I have a lead.', "Let's eliminate the suspects.", 'Interesting.', 'Probability pending.'],
-  light: ['Naturally.', 'Too easy.', 'A step ahead.', 'One source is enough.'],
-  levi: ["Don't waste my time.", 'Tch. Let me see the filth.', 'Wipe it down.', 'Every corner.'],
-  robin: ['How interesting.', 'I want to know...', 'Shall we read on?', 'Only what is written.'],
+  senku: ['Get excited!', "Let's get building.", 'This is exhilarating!', 'Fresh variables!', 'Sosoru ze, kore wa!'],
+  sanji: ['Order up.', 'Leave the rest to me.', 'The plate will be flawless.', 'Every guest served.', 'Hmph. Not on my watch.'],
+  l: ['I have a lead.', "Let's eliminate the suspects.", 'Interesting.', 'Probability pending.', 'Watashi wa L desu.'],
+  light: ['Naturally.', 'Too easy.', 'A step ahead.', 'One source is enough.', 'Keikaku dōri.'],
+  levi: ["Don't waste my time.", 'Tch. Let me see the filth.', 'Wipe it down.', 'Every corner.', 'Rittai Kidō Sōchi.'],
+  robin: ['How interesting.', 'I want to know...', 'Shall we read on?', 'Only what is written.', 'Cien Fleur.'],
 }
 
 /** What a crew member says when it falls, shown beside a fallen member in the roster. */
@@ -47,44 +50,37 @@ export const FALL_LINES: Record<string, string> = {
   robin: 'A forged inscription.',
 }
 
+/** Fall toast lines after FALL_LINES[key] (which is always the first one). */
+export const FALL_MORE: Record<string, readonly string[]> = {
+  senku: ["That's data, not a failure.", 'Science does not care.'],
+  sanji: ["I'll remake it.", 'A sloppy plate.'],
+  l: ['Probability revised down.', 'Suspicious.'],
+  light: ['Noted, and corrected.', 'Predictable.'],
+  levi: ['Clean it up.', 'Disgusting.'],
+  robin: ['A worn inscription.', 'I will correct it.'],
+}
+
+/** Return toast lines for a report with no `Says:` line, by character. They say the crew member is back, not how the work went. */
+export const RETURN_TOAST: Record<string, readonly string[]> = {
+  senku: ['Experiment succeeded.', 'Science wins.', 'Hypothesis confirmed!', 'Kagaku Ōkoku!'],
+  sanji: ['Served.', 'Bon appetit.', 'Flawless.', 'Order up.', 'Now that is a clean plate.', 'Merorin~'],
+  l: ['The case is closed.', 'Interesting.', 'I have a lead.', 'Watashi wa L desu.'],
+  light: ['Done. Cleanly.', 'Exactly as expected.', 'Keikaku dōri.', 'As I calculated.'],
+  levi: ['Inspection done.', 'Tch. Report is in.', 'Wiped it down.', 'Every corner checked.'],
+  robin: ['The record stands.', 'The record is complete.', 'Fufu. Read and recorded.', 'How interesting.'],
+}
+
+/** How long each toast stays (ms); the lines that carry a report or a promotion stay longer than a deploy. */
+export const TOAST_MS = { deploy: 3000, return: 5000, fall: 6000, rankUp: 7000 } as const
+/** Widest a toast line may be, in terminal cells. */
+export const TOAST_CELLS = 60
+
 /** Turn-end words for turns of a minute and a half or more, per strategist (WORDS.done covers the rest). */
 export const LONG_TURN_MS = 90_000
 export const TURN_LONG: Record<string, readonly string[]> = {
   shikamaru: ['Slogged through', 'Dragged through', 'Endured'],
   lelouch: ['Played the long game', 'Won the long game', 'Held the line'],
   strategist: ['Worked through'],
-}
-
-/** The band header, `{n}` the number of crew out; `compact` is for narrow bands. */
-export const BAND_HEADER: Record<string, { full: string; compact: string }> = {
-  shikamaru: { full: 'Shadow formation: {n} deployed', compact: 'Shadows: {n} out' },
-  lelouch: { full: 'Black Knights: {n} deployed', compact: 'Knights: {n} out' },
-}
-
-/** One dim line after the prompt hint, by what the prompt is doing. */
-export const HINTS: Record<string, { idle: readonly string[]; draft: readonly string[]; working: readonly string[] }> = {
-  shikamaru: {
-    idle: ['What a drag.', 'Number of moves matters.', 'Clouds are nicer than this.', 'Troublesome.'],
-    draft: ['Make it three moves, tops.', 'Anyway, go on.', 'Name the cheap line.'],
-    working: ['Moves, not effort.', "Don't make me do this twice.", 'Let me think. Quietly.'],
-  },
-  lelouch: {
-    idle: ['Your move.', 'The board is set.', 'All according to plan.', 'I will not lose.'],
-    draft: ['State the objective.', 'Name your move.', 'Then I shall adapt.'],
-    working: ['Everything proceeds as calculated.', 'The pieces are moving.', 'Stand aside; I have a plan.'],
-  },
-}
-
-/** Labels shown beside a footer mode: a mode whose name matches `match` gets `label`. */
-export const MODE_LABELS: Record<string, readonly { match: RegExp; label: string }[]> = {
-  shikamaru: [
-    { match: /focus/i, label: 'shadow stance' },
-    { match: /memory/i, label: 'clouds drifting' },
-  ],
-  lelouch: [
-    { match: /focus/i, label: 'eyes on the board' },
-    { match: /memory/i, label: 'the board is frozen' },
-  ],
 }
 
 /** Model per agent, copied from roster.mjs (the plugin's roster file is a build-time input, not imported here). */
@@ -123,6 +119,8 @@ export const USAGE_BARS: Record<string, { full: string; empty: string }> = {
   shikamaru: { full: '≋', empty: '∙' },
   lelouch: { full: '♞', empty: '⋅' },
 }
+/** The busiest rate-limit window (Stamina) is drawn only from this percent up. */
+export const USAGE_STAMINA_AT = 50
 export const USAGE_WARN_AT = 60
 export const USAGE_HOT_AT = 85
 /** Rate-limit window kind -> the short label drawn beside Stamina. */

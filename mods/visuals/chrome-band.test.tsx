@@ -31,9 +31,9 @@ const SANJI: BandRow = {
 const LEVI: BandRow = { key: 'levi', description: 'Review the whole chrome and transcript diff for regressions and a11y gaps', tool: 'Read: /a/b.ts', elapsedMs: 42_000, tokens: 3100 }
 const L: BandRow = { key: 'l', description: 'Research', elapsedMs: 3_900_000 }
 
-/** The crew rows of a plan, header left out. */
+/** The crew rows of a plan. */
 const rowsOf = (rows: readonly BandRow[], columns: number, mode: 'dark' | 'light' = 'dark', frame = 0) =>
-  planBand({ persona: 'shikamaru', rows, frame, columns, maxRows: 12, mode }).slice(1)
+  planBand({ persona: 'shikamaru', rows, frame, columns, maxRows: 12, mode })
 
 describe('band rows: format', () => {
   test('glyph and emoji, the name in the character color, the task, a dim right column', () => {
@@ -59,10 +59,12 @@ describe('band rows: format', () => {
     }
   })
 
-  test('the header is the strategist line as before; a row is one line', () => {
+  test('no header: a row is one line, and a band is one line per row', () => {
     const lines = planBand({ persona: 'shikamaru', rows: [SANJI, LEVI], frame: 0, columns: 120, maxRows: 5 })
-    expect(text(lines[0] as Line)).toBe('🦌 Shadow formation: 2 deployed ◐')
-    expect(lines).toHaveLength(3)
+    expect(lines).toHaveLength(2)
+    expect(text(lines[0] as Line).startsWith('♨ 🍳 Sanji')).toBe(true)
+    expect(text(lines[1] as Line).startsWith('⚔ 🧹 Levi')).toBe(true)
+    expect(lines.map(text).join('\n')).not.toContain('Shadow formation')
   })
 
   test('the right column ends on one cell for every row, and the names line up', () => {
@@ -175,13 +177,20 @@ describe('band rows: width', () => {
 
   test('overflow still folds into a +N more line; a single spare row is a summary', () => {
     const three = planBand({ persona: 'shikamaru', rows: [SANJI, LEVI, L], frame: 0, columns: 120, maxRows: 3 })
-    expect(three.map(text)).toEqual([expect.stringContaining('Shadow formation'), expect.stringContaining('Sanji'), '+2 more'])
+    expect(three.map(text)).toEqual([expect.stringContaining('Sanji'), expect.stringContaining('Levi'), expect.stringContaining('L  ')])
+    const two = planBand({ persona: 'shikamaru', rows: [SANJI, LEVI, L], frame: 0, columns: 120, maxRows: 2 })
+    expect(two.map(text)).toEqual([expect.stringContaining('Sanji'), '+2 more'])
     const one = planBand({ persona: 'shikamaru', rows: [SANJI, LEVI, L], frame: 0, columns: 120, maxRows: 1 })
     expect(one.map(text)).toEqual(['🦌 3 out 🍳 🧹 🍰'])
   })
 })
 
 describe('band rows: tool name', () => {
+  test('the internal report hand-back is not shown as a tool', () => {
+    expect(toolName('SubagentHandback: report')).toBeUndefined()
+    expect(toolName('SubagentHandback')).toBeUndefined()
+  })
+
   test('only the name of the tool, never its command', () => {
     expect(toolName('Bash: sed -i "s|a|b|" file')).toBe('Bash')
     expect(toolName('Read: /home/x/y.ts')).toBe('Read')
@@ -275,9 +284,9 @@ describe('band rows: live', () => {
     crew(w, ['ag-1', 'dojo:levi', 'QA the cart'])
     await $.agent.spawn(spawnInput('dojo:levi', undefined, 'QA the cart'))
     const ui = await mountBand($)
-    expect((await rowTexts(ui))[1]).toMatch(/^⚔ 🧹 Levi {3}QA the cart {2,}0s$/)
+    expect((await rowTexts(ui))[0]).toMatch(/^⚔ 🧹 Levi {3}QA the cart {2,}0s$/)
     await w.clock.advance(65_000)
-    const later = (await rowTexts(ui))[1] ?? ''
+    const later = (await rowTexts(ui))[0] ?? ''
     expect(later).toMatch(/^\S 🧹 Levi {3}QA the cart {2,}1m 05s$/)
     expect(cellWidth(later)).toBe(BAND_PROPS.bodyColumns - 1)
     await ui.unmount()
@@ -303,17 +312,17 @@ describe('band rows: live', () => {
     crew(w, ['ag-1', 'dojo:levi', 'QA the cart'])
     await $.agent.spawn(spawnInput('dojo:levi', undefined, 'QA the cart'))
     const ui = await mountBand($)
-    expect((await rowTexts(ui))[1]).not.toContain('↓')
+    expect((await rowTexts(ui))[0]).not.toContain('↓')
     w.spend(500, 1000)
     await step($, 'ag-1')
-    expect(((await rowTexts(ui))[1] ?? '').endsWith('0s · ↓ 1.5k')).toBe(true)
+    expect(((await rowTexts(ui))[0] ?? '').endsWith('0s · ↓ 1.5k')).toBe(true)
     w.spend(100, 400)
     await step($, 'ag-1')
-    expect(((await rowTexts(ui))[1] ?? '').endsWith('0s · ↓ 2k')).toBe(true)
+    expect(((await rowTexts(ui))[0] ?? '').endsWith('0s · ↓ 2k')).toBe(true)
     // the main loop's requests, and another agent's, are not this row's
     await step($)
     await step($, 'ag-other')
-    expect(((await rowTexts(ui))[1] ?? '').endsWith('0s · ↓ 2k')).toBe(true)
+    expect(((await rowTexts(ui))[0] ?? '').endsWith('0s · ↓ 2k')).toBe(true)
     await ui.unmount()
   })
 
@@ -333,9 +342,9 @@ describe('band rows: live', () => {
       } as never)
     const ui = await mountBand($)
     await finish(1000, 4000)
-    expect(((await rowTexts(ui))[1] ?? '').endsWith('↓ 5k')).toBe(true)
+    expect(((await rowTexts(ui))[0] ?? '').endsWith('↓ 5k')).toBe(true)
     await finish(10, 10)
-    expect(((await rowTexts(ui))[1] ?? '').endsWith('↓ 5k')).toBe(true)
+    expect(((await rowTexts(ui))[0] ?? '').endsWith('↓ 5k')).toBe(true)
     await ui.unmount()
   })
 
@@ -346,7 +355,7 @@ describe('band rows: live', () => {
     const command = 'sed -i "s| const unset = await draw(...|x|" mods/visuals/chrome.test.tsx'
     await $.tool.call({ tool: 'Bash', input: { command }, command, agentId: 'ag-1' } as never)
     const ui = await mountBand($)
-    const row = (await rowTexts(ui))[1] ?? ''
+    const row = (await rowTexts(ui))[0] ?? ''
     expect(row).toContain('Light palette + transcript side · Bash')
     expect(row).not.toContain('sed')
     await ui.unmount()
@@ -394,7 +403,7 @@ describe('band rows: live', () => {
     await $.agent.spawn(spawnInput('dojo:levi', undefined, 'QA the cart'))
     await w.clock.advance(42_000)
     const ui = await mountBand($, { bodyColumns: 45 })
-    expect((await rowTexts(ui))[1]).toMatch(/^\S 🧹 Levi {3}42s$/)
+    expect((await rowTexts(ui))[0]).toMatch(/^\S 🧹 Levi {3}42s$/)
     await ui.unmount()
   })
 })

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.7.0
+
+### Changed
+- **Transcript**: strategist replies now draw as a thin one-cell colored stripe only, no header frame. Main-thread tool badges are hidden; crew tool rows show only the crew emoji. Crew deploy, return and fall states are one-line moments: `emoji Name ▸ task  "quote"` (deploy), `emoji Name ✓ elapsed  "Says or return line"` (return), `💀 Name ✗ fell  "fall line"` (fallen). AskUserQuestion and InfoNotice are no longer framed. Background launches (async) draw no second card. ASCII banners are drawn at fixed widths.
+- **Chrome toasts**: deploy toast (3s) and return toast (5s) show the crew member's says line or a signature line. Fall toast (6s) and rank-up toast (7s) are text only, replacing return for the agent that crossed a rank line. Deploy uses: `emoji Name deployed`, return: `emoji Name returned`, fall: `💀 Name fell`.
+- **Crew band**: no header row, one row per running agent, showing animated glyph, emoji, name, task description, tool name (when space allows), and elapsed time and token count (right-aligned).
+- **Usage line**: Stamina (busiest rate-limit window) is shown only when it reaches 50% or higher. Prompt hint catchphrase removed; hint text displayed only in /dojo-gallery.
+- **Prompt chrome**: session mode line shows real mode names (e.g. `Agentic & Vision`), dim, ending with a small `emoji Name` tag in the strategist's color.
+- **Banners toggle**: `banners` (off by default) opts into full ASCII-banner crew cards in the transcript, replacing the default one-line moments. Cards remain in `/dojo-gallery` preview regardless.
+
+### Removed
+- Main-thread tool call badges in transcripts (crew emoji shows in ToolGroup row instead).
+- Prompt hint text from the main chrome (moved to /dojo-gallery for discovery).
+- Two-card flow for background agent launches (one-line note remains).
+
 ## 0.6.0
 
 - Palette mode: new `paletteMode` setting (auto, dark, light; default auto). Auto follows the Claude Code theme (light when its name contains "light"). Light-theme colors meet ≥4.5:1 contrast on white; dark colors are lifted to ≥4.5:1 on black via `legible`, applied across transcript, spinners, band, and all chrome. Colors already account for this in `theme.ts` and `mods/visuals/transcript-lib.ts`.

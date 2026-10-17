@@ -5,29 +5,30 @@ import { isOn } from '../lib/options'
 import type { Installer, Options } from '../lib/options'
 import { crewKey, strategistKey } from '../lib/persona'
 import { summarizeTool } from '../lib/text'
-import { CREW, FELL_EMOJI, NEUTRAL, STRATEGISTS, WORDS, resolveMode } from '../theme'
+import { CREW, NEUTRAL, STRATEGISTS, WORDS, resolveMode } from '../theme'
 import type { PaletteMode, Theme, Words } from '../theme'
 import type { DojoBand, DojoCrewRow, DojoCrewStats, DojoRank, DojoRosterEntry, DojoRun, DojoUsage } from '../state'
-import { CUE_GAP_MS, DEPLOY_MORE, GALLERY_ORDER, RANK_STORE_KEY, SOUNDS } from './chrome-art'
+import { CUE_GAP_MS, GALLERY_ORDER, RANK_STORE_KEY, SOUNDS, TOAST_MS } from './chrome-art'
 import type { Cue } from './chrome-art'
 import {
   addStats,
-  deployLine,
+  deployToast,
+  fallToast,
   framesOf,
   galleryLines,
   galleryText,
-  hintTail,
   parseSays,
   planBand,
+  planModes,
   planUsage,
   rankOf,
   rankUpText,
   recapLines,
   recapText,
+  returnToast,
   rosterLines,
   rosterText,
   snapshotUsage,
-  themedModes,
   tokensOf,
   turnWord,
   verbAt,
@@ -234,17 +235,6 @@ async function tick($: Engine, options: Options) {
     table = foldRoster(now, groups) === now ? now : await update($, roster, r => foldRoster(r, groups))
   }
 
-  if (isOn(options, 'toasts')) {
-    for (const f of finished) {
-      const c = CREW[f.key]
-      if (c === undefined) continue
-      const says = table[f.key]?.says
-      $.ui.toast(
-        f.ok ? `${c.emoji} ${c.name} returned${says === undefined ? '' : ` — "${says}"`}` : `${FELL_EMOJI} ${c.name} fell`,
-      )
-    }
-  }
-  if (finished.length > 0) await cue($, options, finished.some(f => !f.ok) ? 'fall' : 'return')
   if (finished.length > 0 && isOn(options, 'rosterPane')) {
     try {
       await update($, stats, s => finished.reduce((t, f) => addStats(t, f.key, f.ok ? { returned: 1 } : { fell: 1 }), s))
@@ -252,7 +242,23 @@ async function tick($: Engine, options: Options) {
       // the figures are a garnish
     }
   }
-  await awardRank($, options, finished.filter(f => f.ok).length)
+  const promoted = await awardRank($, options, finished.filter(f => f.ok).length)
+
+  // one toast per agent that ended; the return that earned a new rank speaks as the rank-up instead
+  if (isOn(options, 'toasts')) {
+    let wins = 0
+    for (const f of finished) {
+      if (f.ok) wins += 1
+      if (f.ok && promoted !== undefined && wins === promoted.win) {
+        $.ui.toast(promoted.text, { timeoutMs: TOAST_MS.rankUp })
+        continue
+      }
+      const nth = table[f.key]?.count ?? 1
+      if (f.ok) $.ui.toast(returnToast(f.key, nth, table[f.key]?.says), { timeoutMs: TOAST_MS.return })
+      else $.ui.toast(fallToast(f.key, nth), { timeoutMs: TOAST_MS.fall })
+    }
+  }
+  if (finished.length > 0) await cue($, options, finished.some(f => !f.ok) ? 'fall' : 'return')
 
   if (rows.length === 0) {
     timer?.cancel()
@@ -316,9 +322,12 @@ async function peekRank($: Engine, options: Options): Promise<DojoRank | undefin
   }
 }
 
-/** Adds `wins` returned crew to the points, saves them and toasts a new rung in the strategist's voice. */
-async function awardRank($: Engine, options: Options, wins: number) {
-  if (wins <= 0 || !isOn(options, 'rank')) return
+/**
+ * Adds `wins` returned crew to the points and saves them. When that reaches a new rung it answers with the rung's
+ * toast text in the strategist's voice and `win`, which of the returns (1-based) crossed the line.
+ */
+async function awardRank($: Engine, options: Options, wins: number): Promise<{ win: number; text: string } | undefined> {
+  if (wins <= 0 || !isOn(options, 'rank')) return undefined
   try {
     const before = await loadRank($)
     const grown = (r: DojoRank | null): DojoRank => {
@@ -336,11 +345,16 @@ async function awardRank($: Engine, options: Options, wins: number) {
     if (isOn(options, 'toasts')) {
       const persona = await personaKey($)
       const now = rankOf(after.points, persona)
-      if (now.index > rankOf(after.points - wins, persona).index) $.ui.toast(rankUpText(now, persona))
+      if (now.index > rankOf(after.points - wins, persona).index) {
+        let win = wins
+        while (win > 1 && rankOf(after.points - wins + win - 1, persona).index === now.index) win -= 1
+        return { win, text: rankUpText(now, persona) }
+      }
     }
   } catch {
     // the rank is a garnish
   }
+  return undefined
 }
 
 function ensureTick($: Engine, options: Options) {
@@ -411,9 +425,7 @@ export const installChrome: Installer = (on, options) => {
           nth = table[key]?.count ?? 1
         }
         if (isOn(options, 'rosterPane')) await update($, stats, s => addStats(s, key, { runs: 1 }))
-        if (c !== undefined && isOn(options, 'toasts')) {
-          $.ui.toast(`${c.emoji} ${c.name} deployed — "${deployLine(key, nth, DEPLOY_MORE[key] ?? [])}"`)
-        }
+        if (c !== undefined && isOn(options, 'toasts')) $.ui.toast(deployToast(key, nth), { timeoutMs: TOAST_MS.deploy })
         await cue($, options, 'deploy')
         ensureTick($, options)
         if (isOn(options, 'band')) {
@@ -641,29 +653,17 @@ export const installChrome: Installer = (on, options) => {
     return tree ?? next(e)
   })
 
-  // The prompt hint keeps the engine's line (its pills stay live); the strategist adds a dim line of its own after it.
-  on('ui.render', { component: 'PromptHint' }, async ($, e, next) => {
-    if (!isOn(options, 'promptChrome') || e.surface !== 'terminal') return next(e)
-    let tail: string | undefined
-    try {
-      const mine = hintTail(await personaKey($), (await read($, turn)) ?? 0, e.props.isWorking, e.props.isDraft)
-      tail = mine === undefined ? undefined : e.props.tail === undefined ? mine : `${e.props.tail} ${mine}`
-    } catch {
-      tail = undefined
-    }
-    return tail === undefined ? next(e) : next({ ...e, props: { ...e.props, tail } })
-  })
-
-  // Each footer mode keeps its own name; the strategist's label sits beside it and its badge follows.
+  // The footer keeps the modes' names, dim, and ends on the strategist's small tag in its color.
   on('ui.render', { component: 'SessionMode' }, async ($, e, next) => {
     if (!isOn(options, 'promptChrome')) return next(e)
-    let modes: string[] | undefined
+    let tree: RenderElement | undefined
     try {
-      modes = themedModes(await personaKey($), e.props.modes)
+      const line = planModes(await personaKey($), e.props.modes, await read($, paletteMode))
+      if (line !== undefined) tree = drawLine($.ui.resolve(e).Text, line, 'modes')
     } catch {
-      modes = undefined
+      tree = undefined
     }
-    return modes === undefined ? next(e) : next({ ...e, props: { ...e.props, modes } })
+    return tree ?? next(e)
   })
 
   // /dojo, /dojo-recap and /dojo-gallery open panes. Commands can only be registered once an interactive session binds.

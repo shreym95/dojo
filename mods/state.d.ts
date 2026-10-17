@@ -45,7 +45,7 @@ declare module 'claude-code' {
       tools: Record<string, string>
       /** Per running subagent id: when it started and the tokens spent so far, for the band's right column. */
       runs: Record<string, DojoRun>
-      /** Crew status per character key (`levi`), for the /dojo roster pane and the toast line rotation. */
+      /** Crew status per character key (`levi`), for the /dojo roster pane; `count` picks the toast line in its rotation and `says` is the return toast's quote. */
       roster: Record<string, DojoRosterEntry>
       /** Spinner animation counter; it only advances while a spinner is on screen. */
       pulse: number

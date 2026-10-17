@@ -4,73 +4,118 @@
 export const BANNER_ROWS = 7
 export const BANNER_COLUMNS = 40
 
-/** One banner per character (strategists and crew), keyed like the theme records. */
+/**
+ * A banner from its drawing and its caption. The drawing is padded to its own widest row, the caption starts three cells
+ * after it at row `at`, and every row is padded to the banner width: no ragged edge, no shared left margin.
+ */
+function banner(art: readonly string[], caption: readonly string[], at = 1): readonly string[] {
+  const lead = Math.min(...art.filter(r => r.trim() !== '').map(r => r.length - r.trimStart().length))
+  const drawn = art.map(r => r.slice(lead).trimEnd())
+  const artWidth = Math.max(...drawn.map(r => r.length))
+  const count = Math.max(drawn.length, at + caption.length)
+  const rows = Array.from({ length: count }, (_, i) => {
+    const left = (drawn[i] ?? '').padEnd(artWidth)
+    const text = caption[i - at]
+    return text === undefined ? left : `${left}   ${text}`
+  })
+  const width = Math.max(...rows.map(r => r.length))
+  return rows.map(r => r.padEnd(width))
+}
+
+/** One banner per character (strategists and crew), keyed like the theme records. Drawings are symmetric about their axis. */
 export const BANNERS: Record<string, readonly string[]> = {
-  shikamaru: [
-    String.raw`  Y     Y`,
-    String.raw`   \   /       S H I K A M A R U`,
-    String.raw`   (-. .-)     ==================`,
-    String.raw`   ( v v )     what a drag...`,
-    String.raw`   '-----'     .--.  .---.`,
-    String.raw`               (    )(     )  clouds`,
-  ],
-  lelouch: [
-    String.raw`      +`,
-    String.raw`     _|_`,
-    String.raw`    (___)       L E L O U C H`,
-    String.raw`     | |        ==============`,
-    String.raw`    /___\       checkmate.`,
-    String.raw`   [_____]`,
-  ],
-  senku: [
-    String.raw`     _`,
-    String.raw`    | |      S E N K U`,
-    String.raw`    | |      ===========`,
-    String.raw`   /o  \     ten billion percent`,
-    String.raw`  (_.o__)`,
-  ],
-  sanji: [
-    String.raw`    ) ) )`,
-    String.raw`  .-------.   S A N J I`,
-    String.raw` /  .---.  \  ===========`,
-    String.raw` \  '---'  /=== order up`,
-    String.raw`  '-------'`,
-  ],
-  l: [
-    String.raw`      ____`,
-    String.raw`     /__/ |     L`,
-    String.raw`    |~~~~ |     ===========`,
-    String.raw`    |_____|/    the case is closed`,
-  ],
-  light: [
-    String.raw`   .-------.`,
-    String.raw`   | ===== |    L I G H T`,
-    String.raw`   | ===== |    ===========`,
-    String.raw`   |  ~ ~  |    just as planned`,
-    String.raw`   '-------'`,
-  ],
-  levi: [
-    String.raw`   \    /`,
-    String.raw`    \  /       L E V I`,
-    String.raw`     \/        ===========`,
-    String.raw`     /\        spotless`,
-    String.raw`    _/  \_`,
-  ],
-  robin: [
-    String.raw`      (@)`,
-    String.raw`    (@)*(@)    R O B I N`,
-    String.raw`      (@)      ===========`,
-    String.raw`       |       the record stands`,
-    String.raw`      -+-`,
-  ],
+  shikamaru: banner(
+    [
+      String.raw`  \ | /  `,
+      String.raw` (-. .-) `,
+      String.raw` ( v v ) `,
+      String.raw`  '---'  `,
+      String.raw` .--.--. `,
+      String.raw`(_______)`,
+    ],
+    ['S H I K A M A R U', '=================', 'what a drag...'],
+  ),
+  lelouch: banner(
+    [
+      String.raw`    +    `,
+      String.raw`   _|_   `,
+      String.raw`  (___)  `,
+      String.raw`   | |   `,
+      String.raw`  /___\  `,
+      String.raw` [_____] `,
+    ],
+    ['L E L O U C H', '=============', 'checkmate.'],
+  ),
+  senku: banner(
+    [
+      String.raw`   | |   `,
+      String.raw`   | |   `,
+      String.raw`   | |   `,
+      String.raw`  /   \  `,
+      String.raw` / o o \ `,
+      String.raw`(_______)`,
+    ],
+    ['S E N K U', '=========', 'ten billion percent'],
+  ),
+  sanji: banner(
+    [
+      String.raw`   ~ ~ ~   `,
+      String.raw` .-------. `,
+      String.raw`/  .---.  \ `,
+      String.raw`\  '---'  /`,
+      String.raw` '-------' `,
+    ],
+    ['S A N J I', '=========', 'order up'],
+  ),
+  l: banner(
+    [
+      String.raw`     o     `,
+      String.raw`   .-^-.   `,
+      String.raw`  /_____\  `,
+      String.raw` |~~~~~~~| `,
+      String.raw` |_______| `,
+    ],
+    ['L', '=================', 'the case is closed'],
+  ),
+  light: banner(
+    [
+      String.raw`.-------.`,
+      String.raw`| ===== |`,
+      String.raw`| ===== |`,
+      String.raw`|  ~ ~  |`,
+      String.raw`'-------'`,
+    ],
+    ['L I G H T', '=========', 'just as planned'],
+  ),
+  levi: banner(
+    [
+      String.raw`\    /`,
+      String.raw` \  / `,
+      String.raw`  \/  `,
+      String.raw`  /\  `,
+      String.raw` /  \ `,
+      String.raw`/    \ `,
+    ],
+    ['L E V I', '=======', 'spotless'],
+  ),
+  robin: banner(
+    [
+      String.raw`   (@)   `,
+      String.raw` (@)*(@) `,
+      String.raw`   (@)   `,
+      String.raw`  \ | /  `,
+      String.raw`   \|/   `,
+      String.raw`    |    `,
+    ],
+    ['R O B I N', '=========', 'the record stands'],
+  ),
 }
 
 /** The generic banner of a theme without art of its own (the neutral strategist). */
-export const NEUTRAL_BANNER: readonly string[] = [
-  String.raw`   .-----.`,
-  String.raw`   | o o |     S T R A T E G I S T`,
-  String.raw`   '-----'     =====================`,
-]
+export const NEUTRAL_BANNER: readonly string[] = banner(
+  [String.raw`.-----.`, String.raw`| o o |`, String.raw`'-----'`],
+  ['S T R A T E G I S T', '==================='],
+)
 
 /** Per-character motif glyphs (single width) for header rules and gutters. */
 export const MOTIFS: Record<string, { glyph: string; rule: string; gutter: string }> = {

@@ -47,7 +47,7 @@ npm test
 
 `agents/*.md` is generated; do not edit by hand.
 
-**Visuals and art**: edit `mods/theme.ts` to change character emoji and colors; `mods/visuals/transcript-art.ts` for banners and speech bubbles; `mods/visuals/chrome-art.ts` for spinner verbs, turn-end words, toast lines, fall lines, prompt hints and band headers. Validate, test and try locally:
+**Visuals and art**: edit `mods/theme.ts` to change character emoji and colors; `mods/visuals/transcript-art.ts` for banners, speech bubbles and crew card lines; `mods/visuals/chrome-art.ts` for spinner verbs, turn-end words, toast lines, fall lines, rank-up text, and band rows. Validate, test and try locally:
 
 ```
 claude plugin validate .   # check the hook structure
@@ -74,16 +74,16 @@ Built on Claude Code's function hooks (early-access API), the dojo plugin includ
 - **Themed spinners**: the main thread's spinner word comes from the on-duty strategist (Shikamaru: "Shadow-possessing", "Reading the board"; Lelouch: "Commanding", "Geass-ing"). A crew member's own spinner gets its emoji and verbs (🧪 Senku "Science-ing", 🧹 Levi "Scrubbing", 🌸 Robin "Deciphering"...). Verbs rotate per turn.
 - **Turn-end flair**: the line that closes a turn says "Outmaneuvered" (Shikamaru) or "Checkmated" (Lelouch).
 - **Crew band**: while any `dojo:*` subagent runs, one row each above the prompt showing the animated glyph, emoji, name, task, short tool name, and right-aligned elapsed time and live tokens (input+output, cache excluded). Gone when nobody is running. The row shrinks on narrow terminals. Claude Code's own agent list below the prompt is drawn by the engine and cannot be hidden or restyled by a plugin, so it still shows alongside the band.
-- **Session usage line**: one row above the prompt that shows where the session is heading. The bar shape follows the strategist: Shikamaru shows `≋∙` (density wave), Lelouch `♞⋅` (knight), neutral `▰▱` (block). Example: `🦌 Chakra ≋≋≋≋≋≋∙∙∙∙ 58% · Stamina 23% (5h) · 両 $1.42`. Chakra is the context window's fill, Stamina the busiest rate-limit window (subscriptions only), and the last figure the session cost. The bar color turns to warning from 60% and error from 85%, where a short line from the strategist is added. A segment with no data is left out; under 50 columns the row shrinks to `🦌 ≋≋≋∙ 58% · 23%`.
+- **Session usage line**: one row above the prompt that shows where the session is heading. The bar shape follows the strategist: Shikamaru shows `≋∙` (density wave), Lelouch `♞⋅` (knight), neutral `▰▱` (block). Example: `🦌 Chakra ≋≋≋≋≋≋∙∙∙∙ 58% · Stamina 23% (5h) · 両 $1.42`. Chakra is the context window's fill, Stamina the busiest rate-limit window (shown only at ≥50%; subscriptions only), and the last figure the session cost. The bar color turns to warning from 60% and error from 85%, where a short line from the strategist is added. A segment with no data is left out; under 50 columns the row shrinks to `🦌 ≋≋≋∙ 58% · 23%`.
 - **Palette mode**: light-theme colors meet ≥4.5:1 contrast on white; dark colors are lifted to ≥4.5:1 on black and applied across spinners, crew band, transcript, and all chrome.
-- **Transcript theme**: persona frames on messages, tool badges, crew cards and speech bubbles in the on-duty character's colors.
-- **ASCII banners**: shown when a dojo subagent is deployed and when it returns.
-- **Prompt chrome**: themed prompt area with persona hints under the prompt and session mode labels.
+- **Transcript theme**: persona frame (a 1-cell colored stripe) on the strategist's reply, and crew cards (or one-line moments) in the on-duty character's colors on crew-member tool calls, results and errors. Tool badges show the crew emoji.
+- **Crew cards**: opt-in via the `banners` toggle (off by default). Full cards with ASCII banners shown when deployed, returned or fallen, replacing the one-line deploy/return/fall moments.
+- **Prompt chrome**: the session mode line tagged with the on-duty strategist's emoji and name in its color.
 - **Roster pane**: `/dojo` shows the crew, who is on duty and who is running, with per-crew session stats (runs, time, tokens, most-deployed badge at ≥2 runs) and rank line.
 - **Mission report**: `/dojo-recap` shows crew deployed, runs, time, tokens, last `Says:` line, who fell, final context and cost, rank, and the strategist's sign-off. Command only.
 - **Gallery**: `/dojo-gallery` previews each character's banner, colors (dark/light variants), animation frames, spinner verbs, signature lines, and sample speech bubble. Navigate with `p`/`n`, close with `q` or Esc.
 - **Rank across sessions**: a rank that grows with every dojo crew member that returns. Shikamaru/neutral use Genin / Chūnin / Jōnin / Kage; Lelouch uses Pawn / Knight / Rook / King. Thresholds: 0 / 25 / 100 / 300 points. Stored in Claude Code's plugin store; falls back to "(this session)" if unavailable. Toast on rank-up.
-- **Deploy/return toasts and sounds**: `🧹 Levi deployed — "Chi. Show me the mess."`, then `🧹 Levi returned` or `💀 Levi fell`. Sound cues play on macOS only (via `afplay`).
+- **Deploy/return/fall toasts and sounds**: text-only toasts appear when a dojo subagent is deployed (3s), returns (5s) or falls (6s), and when the crew rank goes up (7s). Sound cues play on macOS only (via `afplay`).
 
 Toggle features in `/config` (or `pluginConfigs` in settings): `spinners`, `turnFlair`, `band`, `usageLine`, `toasts`, `neutralMainTheme`, `transcriptTheme`, `banners`, `promptChrome`, `rosterPane`, `sounds`, `paletteMode`, `rank`, all on by default except `paletteMode` which is `auto`.
 
@@ -111,8 +111,8 @@ Every setting below lives in the `userConfig` section of the plugin and can be t
 | `spinners` | true | Replace the spinner word with the on-duty strategist's (or crew member's) themed verbs. |
 | `turnFlair` | true | Past-tense themed word on the line that closes a turn (Outmaneuvered, Checkmated). |
 | `band` | true | Show one animated row per running dojo subagent above the prompt. |
-| `usageLine` | true | Show one row above the prompt with the session's context fill (Chakra), the busiest rate-limit window (Stamina) and the cost. |
-| `toasts` | true | Toast when a dojo subagent is deployed, returns or falls. |
+| `usageLine` | true | Show one row above the prompt with the session's context fill (Chakra) and the cost, plus the busiest rate-limit window (Stamina) once it passes 50%. |
+| `toasts` | true | Short in-character toast when a dojo subagent is deployed, returns or falls, and when the crew rank goes up. |
 | `neutralMainTheme` | true | When no strategist persona is detected, still theme the main spinner with a neutral strategist pool. |
 | `commitGate` | true | Force the configured commit trailer into git texts and deny git commit commands whose inline message breaks the commit rules (Conventional Commits subject, no body, exact trailer). Applies in every session. |
 | `commitTrailer` | `Co-Authored-By: Claude` | The exact Co-Authored-By line commits must carry. Empty keeps Claude Code's own text and skips the trailer check. |
@@ -122,8 +122,8 @@ Every setting below lives in the `userConfig` section of the plugin and can be t
 | `inlineLookups` | 3 | WebSearch and WebFetch calls the main thread may make itself in one turn before it must delegate. |
 | `archivist` | true | In a dojo session, tell the compaction summary to keep the on-duty line, the voice level, running dojo agents with their tasks, and the user's decisions. |
 | `transcriptTheme` | true | Frame messages, tool calls and subagent results in the on-duty character's colors: persona frames on messages, tool badges, crew cards and speech bubbles. |
-| `banners` | true | Show an ASCII banner when a dojo subagent is deployed and when it returns. |
-| `promptChrome` | true | Theme the prompt area: persona hints under the prompt and the session mode line. |
+| `banners` | false | Show full ASCII-banner crew cards in the transcript instead of one-line deploy/return lines. |
+| `promptChrome` | true | Tag the session mode line under the prompt with the on-duty strategist's emoji and name, in its color. |
 | `rosterPane` | true | Show the /dojo roster panel: the crew, who is on duty and who is running. |
 | `sounds` | true | Play a sound cue when a dojo subagent is deployed, returns or falls (macOS only). |
 | `paletteMode` | `auto` | Colors of the dojo chrome and transcript. `auto` follows the Claude Code theme (light when its name contains "light"); `dark` and `light` force one. Light-theme colors meet ≥4.5:1 on white; dark colors are lifted to ≥4.5:1 on black. |

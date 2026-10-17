@@ -6,7 +6,7 @@ import type { Installer, Options } from '../lib/options'
 import { crewKey, strategistKey } from '../lib/persona'
 import { CREW, FELL_EMOJI, NEUTRAL, STRATEGISTS } from '../theme'
 import type { PaletteMode, Theme } from '../theme'
-import { ASKS, BUBBLES, COMMAND_TITLES, DEPLOY_LINES, ERROR_MARKS, FALLEN_LINES, MOTIFS, RETURN_LINES } from './transcript-art'
+import { BUBBLES, COMMAND_TITLES, DEPLOY_LINES, FALLEN_LINES, MOTIFS, RETURN_LINES } from './transcript-art'
 import {
   FALLEN_STATUSES,
   WIDE,
@@ -17,18 +17,20 @@ import {
   crewOfInput,
   descriptionOf,
   dojoCommand,
+  duration,
   dutyNameOf,
   extractSays,
+  fitLine,
   line,
   modeOf,
   paint,
   remember,
-  rule,
   statsLine,
+  tinyMark,
 } from './transcript-lib'
 
-// Transcript makeover (userConfig `transcriptTheme` for frames, badges, cards and bubbles; `banners` for ASCII art).
-// Decoration only: every hook asks the engine for its own drawing first and wraps it. Whatever happens here,
+// Transcript makeover (userConfig `transcriptTheme`; `banners` brings back the full crew cards with ASCII art).
+// By default a crew moment is one line: who, what, a signature quote. Decoration only: every hook asks the engine for its own drawing first and wraps it. Whatever happens here,
 // the engine's drawing is what comes back.
 
 // The module scan reads an atom only from a const of the file that uses it; the {plugin, key} pair is the shared name.
@@ -56,11 +58,10 @@ async function mainTheme($: Engine, options: Options): Promise<Theme | null> {
   return t === null ? null : painted($, t)
 }
 
-/** Who made tool call `id`: a crew member's theme, the strategist's, or null for a subagent that is no dojo crew. */
-async function callerTheme($: Engine, options: Options, id: string): Promise<Theme | null> {
+/** Which crew member made tool call `id`: their theme, or null for the main thread and for a subagent that is no dojo crew. */
+async function callerTheme($: Engine, id: string): Promise<Theme | null> {
   const lane = (await read($, callers))[id]
-  if (lane === undefined) return mainTheme($, options)
-  const t = lane === '-' ? null : (CREW[lane] ?? null)
+  const t = lane === undefined || lane === '-' ? null : (CREW[lane] ?? null)
   return t === null ? null : painted($, t)
 }
 
@@ -82,17 +83,16 @@ function striped(ui: UI, color: string, inner: RenderNode) {
   )
 }
 
-/** `inner` after a small badge on the same row. */
-function badged(ui: UI, who: readonly Theme[], cols: number, errored: boolean, inner: RenderNode) {
+/** `inner` after the emoji of the crew members behind it, on the same row. */
+function prefixed(ui: UI, who: readonly Theme[], inner: RenderNode) {
   const { Box, Text } = ui
   const first = who[0]
   if (first === undefined) return <Box>{inner}</Box>
-  const label = who.map(t => (cols >= WIDE ? `${t.emoji} ${t.name}` : t.emoji)).join(' ') + (errored ? ' ✗' : '')
   return (
     <Box flexDirection="row">
       <Box flexShrink={0} marginRight={1}>
-        <Text color={who.length === 1 ? first.color : undefined} bold wrap="truncate-end">
-          {label}
+        <Text color={who.length === 1 ? first.color : undefined} wrap="truncate-end">
+          {who.map(t => t.emoji).join(' ')}
         </Text>
       </Box>
       <Box flexDirection="column" flexGrow={1} flexShrink={1}>
@@ -102,12 +102,50 @@ function badged(ui: UI, who: readonly Theme[], cols: number, errored: boolean, i
   )
 }
 
-/** A decorative mark above an errored tool result; the error text itself is the engine's. */
-function errorMark({ Text }: UI, who: Theme) {
-  const mark = ERROR_MARKS[who.key] ?? ERROR_MARKS.strategist
+/** A one-word mark above an errored crew result; the error text itself is the engine's. Longer marks are dropped. */
+function errorMark({ Text }: UI, who: Theme, mark: string) {
   return (
-    <Text color="error" wrap="truncate-end">
-      {`${who.emoji} ✗ ${mark}`}
+    <Text wrap="truncate-end">
+      <Text color={who.color}>{who.emoji}</Text>
+      <Text color="error">{' ✗'}</Text>
+      <Text dimColor>{` ${mark}`}</Text>
+    </Text>
+  )
+}
+
+type Moment = {
+  theme: Theme
+  /** Draws the fallen skull instead of the character's emoji. */
+  fell?: boolean
+  glyph: string
+  glyphColor?: string
+  /** Dim text right after the glyph: a duration, `fell`. */
+  detail?: string
+  task?: string
+  quote?: string
+  cols: number
+}
+
+/** A crew moment as one line: emoji and name in the character's color, glyph, dim detail, task, then the quote dim and italic. */
+function momentLine({ Text }: UI, m: Moment) {
+  const t = m.theme
+  const head = `${m.fell === true ? FELL_EMOJI : t.emoji} ${t.name}`
+  const detail = m.detail ?? ''
+  const fixed = cells(head) + 1 + cells(m.glyph) + (detail === '' ? 0 : 1 + cells(detail))
+  const fit = fitLine({ fixed, lead: ' ', task: m.task ?? '', quote: m.quote ?? '', cols: m.cols })
+  return (
+    <Text wrap="truncate-end">
+      <Text color={t.color} bold>
+        {head}
+      </Text>
+      <Text color={m.glyphColor}>{` ${m.glyph}`}</Text>
+      {detail === '' ? null : <Text dimColor>{` ${detail}`}</Text>}
+      {fit.task === '' ? null : <Text>{` ${fit.task}`}</Text>}
+      {fit.quote === '' ? null : (
+        <Text color={t.accent} italic dimColor>
+          {`  “${fit.quote}”`}
+        </Text>
+      )}
     </Text>
   )
 }
@@ -212,9 +250,10 @@ function bubble(ui: UI, t: Theme, says: string, cols: number) {
 
 export const installTranscript: Installer = (on, options) => {
   const themed = () => isOn(options, 'transcriptTheme')
-  const bannersOn = () => isOn(options, 'banners')
+  // Full crew cards with ASCII banners are opt-in: only an explicit true turns them on.
+  const cardsOn = () => options.banners === true
 
-  // Remember which subagent made each tool call, so a row can be badged by the crew member behind it.
+  // Remember which subagent made each tool call, so a row can be marked by the crew member behind it.
   on('tool.call', { agentId: /./ }, async ($, e, next) => {
     if (themed()) {
       try {
@@ -230,7 +269,7 @@ export const installTranscript: Installer = (on, options) => {
     return next(e)
   })
 
-  // Remember which agent type each Agent call spawns, so its result can be drawn as that character's return card.
+  // Remember which agent type each Agent call spawns, so its result can be drawn as that character's return.
   on('tool.call', { tool: 'Agent' }, async ($, e, next) => {
     if (themed()) {
       try {
@@ -244,55 +283,14 @@ export const installTranscript: Installer = (on, options) => {
     return next(e)
   })
 
+  // The strategist's reply keeps only its thin colored stripe.
   on('ui.render', { component: 'AssistantMessage' }, async ($, e, next) => {
     const base = await next(e)
     if (!themed()) return base
     try {
       const t = await mainTheme($, options)
       if (t === null) return base
-      const ui = $.ui.resolve(e)
-      const { Box, Text } = ui
-      const cols = columnsOf(e.viewport)
-      const m = motifOf(t.key)
-      const body = striped(ui, t.color, base)
-      if (e.props.isFirstOfReply !== true) return body
-      const head = cols >= WIDE ? `${t.emoji} ${m.glyph} ${t.name} ${m.glyph} ` : `${t.emoji} ${t.name}`
-      const tail = cols >= WIDE ? rule(m.rule, cols, cells(head)) : ''
-      return (
-        <Box flexDirection="column">
-          <Text wrap="truncate-end">
-            <Text color={t.color} bold>
-              {head}
-            </Text>
-            <Text color={t.accent}>{tail}</Text>
-          </Text>
-          {body}
-        </Box>
-      )
-    } catch {
-      return base
-    }
-  })
-
-  on('ui.render', { component: 'UserMessage' }, async ($, e, next) => {
-    const base = await next(e)
-    if (!themed()) return base
-    try {
-      const kind = e.props.origin.kind
-      if (kind !== 'composer' && kind !== 'bridge') return base
-      const t = await mainTheme($, options)
-      if (t === null) return base
-      const { Box, Text } = $.ui.resolve(e)
-      const m = motifOf(t.key)
-      const seal = columnsOf(e.viewport) >= WIDE ? `${m.glyph} you ${m.rule.repeat(6)}` : `${m.glyph} you`
-      return (
-        <Box flexDirection="column">
-          <Text color={t.accent} dimColor wrap="truncate-end">
-            {seal}
-          </Text>
-          {base}
-        </Box>
-      )
+      return striped($.ui.resolve(e), t.color, base)
     } catch {
       return base
     }
@@ -306,24 +304,35 @@ export const installTranscript: Installer = (on, options) => {
       const { Box } = ui
       const cols = columnsOf(e.viewport)
       const p = e.props
-      const who = await callerTheme($, options, p.tool_use_id)
-      const row = who === null ? base : badged(ui, [who], cols, p.isErrored, base)
+      const who = await callerTheme($, p.tool_use_id)
+      const row = who === null ? base : prefixed(ui, [who], base)
       const spawned = p.tool === 'Agent' ? crewOfInput(p.input) : null
       const crewBase = spawned === null ? undefined : CREW[spawned]
       if (crewBase === undefined) return row
       const crew = await painted($, crewBase)
-      const state: CardState = p.isErrored ? 'fell' : p.isInterrupted ? 'recalled' : 'deployed'
-      const card = crewCard(ui, {
-        theme: crew,
-        state,
-        description: descriptionOf(p.input),
-        cols,
-        banners: bannersOn(),
-        salt: p.tool_use_id,
-      })
+      const description = descriptionOf(p.input)
+      let top: RenderNode
+      if (cardsOn()) {
+        const state: CardState = p.isErrored ? 'fell' : p.isInterrupted ? 'recalled' : 'deployed'
+        top = crewCard(ui, { theme: crew, state, description, cols, banners: true, salt: p.tool_use_id })
+      } else if (p.isErrored) {
+        top = momentLine(ui, {
+          theme: crew,
+          fell: true,
+          glyph: '✗',
+          glyphColor: 'error',
+          detail: 'fell',
+          quote: line(FALLEN_LINES[crew.key], p.tool_use_id),
+          cols,
+        })
+      } else if (p.isInterrupted) {
+        top = momentLine(ui, { theme: crew, glyph: '↩', detail: 'recalled', task: description, cols })
+      } else {
+        top = momentLine(ui, { theme: crew, glyph: '▸', task: description, quote: line(DEPLOY_LINES[crew.key], p.tool_use_id), cols })
+      }
       return (
         <Box flexDirection="column">
-          {card}
+          {top}
           {row}
         </Box>
       )
@@ -358,32 +367,61 @@ export const installTranscript: Installer = (on, options) => {
             }
           }
           const background = !fell && facts.status === 'async_launched'
-          const state: CardState = fell ? 'fell' : background ? 'background' : 'returned'
-          const says = fell || background ? null : extractSays(facts.text)
-          const card = crewCard(ui, {
-            theme: crew,
-            state,
-            description: '',
-            cols,
-            banners: bannersOn(),
-            salt: p.tool_use_id,
-            stats: statsLine(facts),
-          })
+          if (cardsOn()) {
+            const state: CardState = fell ? 'fell' : background ? 'background' : 'returned'
+            const says = fell || background ? null : extractSays(facts.text)
+            const card = crewCard(ui, {
+              theme: crew,
+              state,
+              description: '',
+              cols,
+              banners: true,
+              salt: p.tool_use_id,
+              stats: statsLine(facts),
+            })
+            return (
+              <Box flexDirection="column">
+                {card}
+                {says === null ? null : bubble(ui, crew, says, cols)}
+                {base}
+              </Box>
+            )
+          }
+          // a background launch is no return: the spawn line already said it
+          if (background) return base
+          const moment = fell
+            ? momentLine(ui, {
+                theme: crew,
+                fell: true,
+                glyph: '✗',
+                glyphColor: 'error',
+                detail: 'fell',
+                quote: line(FALLEN_LINES[crew.key], p.tool_use_id),
+                cols,
+              })
+            : momentLine(ui, {
+                theme: crew,
+                glyph: '✓',
+                glyphColor: 'success',
+                ...(facts.durationMs === null ? {} : { detail: duration(facts.durationMs) }),
+                quote: extractSays(facts.text) ?? line(RETURN_LINES[crew.key], p.tool_use_id),
+                cols,
+              })
           return (
             <Box flexDirection="column">
-              {card}
-              {says === null ? null : bubble(ui, crew, says, cols)}
+              {moment}
               {base}
             </Box>
           )
         }
       }
       if (!p.isErrored) return base
-      const who = await callerTheme($, options, p.tool_use_id)
-      if (who === null) return base
+      const who = await callerTheme($, p.tool_use_id)
+      const mark = who === null ? null : tinyMark(who.key)
+      if (who === null || mark === null) return base
       return (
         <Box flexDirection="column">
-          {errorMark(ui, who)}
+          {errorMark(ui, who, mark)}
           {base}
         </Box>
       )
@@ -397,18 +435,16 @@ export const installTranscript: Installer = (on, options) => {
     if (!themed()) return base
     try {
       const ui = $.ui.resolve(e)
-      const cols = columnsOf(e.viewport)
       const lanes = await read($, callers)
-      const main = await mainTheme($, options)
       const who: Theme[] = []
       for (const call of e.props.calls) {
         const lane = call.tool_use_id === undefined ? undefined : lanes[call.tool_use_id]
         const known = lane === undefined || lane === '-' ? null : (CREW[lane] ?? null)
-        const t = lane === undefined ? main : known === null ? null : await painted($, known)
-        if (t !== null && !who.some(w => w.key === t.key)) who.push(t)
+        if (known === null || who.some(w => w.key === known.key)) continue
+        who.push(await painted($, known))
       }
       if (who.length === 0) return base
-      return badged(ui, who, cols, e.props.calls.some(c => c.isErrored), base)
+      return prefixed(ui, who, base)
     } catch {
       return base
     }
@@ -419,9 +455,9 @@ export const installTranscript: Installer = (on, options) => {
     if (!themed()) return base
     try {
       const ui = $.ui.resolve(e)
-      const who = await callerTheme($, options, e.props.tool_use_id)
+      const who = await callerTheme($, e.props.tool_use_id)
       if (who === null) return base
-      return badged(ui, [who], 0, false, base)
+      return prefixed(ui, [who], base)
     } catch {
       return base
     }
@@ -446,8 +482,21 @@ export const installTranscript: Installer = (on, options) => {
       if (t === null) return base
       const { Box, Text } = $.ui.resolve(e)
       const cols = columnsOf(e.viewport)
+      if (!cardsOn()) {
+        return (
+          <Box flexDirection="column">
+            <Text wrap="truncate-end">
+              <Text color={t.color} bold>
+                {`${t.emoji} ${t.name}`}
+              </Text>
+              <Text dimColor>{` · ${COMMAND_TITLES[command]}`}</Text>
+            </Text>
+            {base}
+          </Box>
+        )
+      }
       const m = motifOf(t.key)
-      const rows = bannersOn() && art !== null && cols >= WIDE ? bannerRows(art, cols - 4) : []
+      const rows = art !== null && cols >= WIDE ? bannerRows(art, cols - 4) : []
       return (
         <Box flexDirection="column" borderStyle="round" borderColor={t.color} paddingX={1}>
           {rows.map((row, i) => (
@@ -462,52 +511,6 @@ export const installTranscript: Installer = (on, options) => {
             <Text color={t.accent}>{` · ${COMMAND_TITLES[command]}`}</Text>
           </Text>
           {base}
-        </Box>
-      )
-    } catch {
-      return base
-    }
-  })
-
-  on('ui.render', { component: 'AskUserQuestion' }, async ($, e, next) => {
-    const base = await next(e)
-    if (!themed()) return base
-    try {
-      const t = await mainTheme($, options)
-      if (t === null) return base
-      const { Box, Text } = $.ui.resolve(e)
-      const m = motifOf(t.key)
-      return (
-        <Box flexDirection="column">
-          <Text wrap="truncate-end">
-            <Text color={t.color} bold>
-              {`${t.emoji} ${m.glyph} ${t.name} `}
-            </Text>
-            <Text color={t.accent}>{ASKS[t.key] ?? ASKS.strategist}</Text>
-          </Text>
-          {base}
-        </Box>
-      )
-    } catch {
-      return base
-    }
-  })
-
-  on('ui.render', { component: 'InfoNotice' }, async ($, e, next) => {
-    const base = await next(e)
-    if (!themed()) return base
-    try {
-      const t = await mainTheme($, options)
-      if (t === null) return base
-      const { Box, Text } = $.ui.resolve(e)
-      return (
-        <Box flexDirection="row">
-          <Box flexShrink={0} marginRight={1}>
-            <Text color={t.color}>{motifOf(t.key).glyph}</Text>
-          </Box>
-          <Box flexDirection="column" flexGrow={1} flexShrink={1}>
-            {base}
-          </Box>
         </Box>
       )
     } catch {

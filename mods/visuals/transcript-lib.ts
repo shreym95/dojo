@@ -1,4 +1,4 @@
-import { BANNERS, BANNER_COLUMNS, BANNER_ROWS, NEUTRAL_BANNER } from './transcript-art'
+import { BANNERS, BANNER_COLUMNS, BANNER_ROWS, ERROR_MARKS, NEUTRAL_BANNER } from './transcript-art'
 import { crewKey } from '../lib/persona'
 import { hash } from '../lib/text'
 import { accentFor, colorFor } from '../theme'
@@ -8,6 +8,8 @@ import type { PaletteMode, Theme } from '../theme'
 
 /** Below this many columns a drawing drops banners and falls back to one compact line. */
 export const WIDE = 60
+/** Below this many columns a one-line crew moment drops its quote. */
+export const QUOTE_MIN = 50
 /** Used when the surface has not measured. */
 export const DEFAULT_COLUMNS = 80
 /** Entries kept in the call-lane atoms; the oldest go first. */
@@ -73,6 +75,34 @@ export function bannerRows(key: string, columns: number): readonly string[] {
   const rows = BANNERS[key] ?? NEUTRAL_BANNER
   const width = Math.max(...rows.map(r => r.length))
   return rows.length > BANNER_ROWS || width > BANNER_COLUMNS || width > columns ? [] : rows
+}
+
+/** The error mark of character `key` when it is one short word, else null: longer marks are dropped, not shortened. */
+export function tinyMark(key: string): string | null {
+  const mark = ERROR_MARKS[key]
+  return mark !== undefined && /^[A-Za-z]{1,12}[.!]?$/.test(mark) ? mark : null
+}
+
+/**
+ * What of a one-line crew moment fits `cols`. `fixed` is the width of everything that is neither `task` nor `quote`
+ * (`lead` sits before a non-empty task). Under QUOTE_MIN columns the quote goes first; then the task is cut.
+ * A quote is kept only with at least 12 cells of itself, or the whole task (16 cells at most) beside it.
+ */
+export function fitLine(o: { fixed: number; lead: string; task: string; quote: string; cols: number }): { task: string; quote: string } {
+  const budget = o.cols - 1
+  const lead = o.task === '' ? 0 : cells(o.lead)
+  const room = budget - o.fixed - lead
+  const taskW = cells(o.task)
+  const quoteW = o.quote === '' ? 0 : cells(o.quote) + 4
+  if (o.quote !== '' && o.cols >= QUOTE_MIN) {
+    if (taskW + quoteW <= room) return { task: o.task, quote: o.quote }
+    if (o.task === '') {
+      if (room - 4 >= 12) return { task: '', quote: clip(o.quote, room - 4) }
+    } else if (room - quoteW >= Math.min(taskW, 16)) {
+      return { task: clip(o.task, room - quoteW), quote: o.quote }
+    }
+  }
+  return { task: clip(o.task, room), quote: '' }
 }
 
 const SAYS = /^[ \t>*_`-]*Says:[ \t]*(.+?)[ \t]*$/gim
