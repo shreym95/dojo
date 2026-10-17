@@ -127,7 +127,7 @@ export const USAGE_BARS: Record<string, { full: string; empty: string }> = {
   lelouch: { full: '♞', empty: '⋅' },
 }
 /** The busiest rate-limit window (Stamina) is drawn only from this percent up. */
-export const USAGE_STAMINA_AT = 50
+export const USAGE_STAMINA_AT = 25
 export const USAGE_WARN_AT = 60
 export const USAGE_HOT_AT = 85
 /** Rate-limit window kind -> the short label drawn beside Stamina. */

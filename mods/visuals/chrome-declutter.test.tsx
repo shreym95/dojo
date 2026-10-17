@@ -259,7 +259,7 @@ describe('band: rows only', () => {
   })
 })
 
-describe('usage line: Chakra and cost always, Stamina from 50%', () => {
+describe('usage line: Chakra and cost always, Stamina from 25%', () => {
   const at = (percent: number | null, stamina: number | null, usd: number | null, columns = 80, persona: string | null = 'shikamaru') =>
     text(
       planUsage({
@@ -270,9 +270,9 @@ describe('usage line: Chakra and cost always, Stamina from 50%', () => {
     )
 
   test('below the mark Stamina is left out, from it the figure and its window show', () => {
-    expect(USAGE_STAMINA_AT).toBe(50)
-    expect(at(58, 49, 1.42)).toBe('🦌 Chakra ≋≋≋≋≋≋∙∙∙∙ 58% · 両 $1.42')
-    expect(at(58, 50, 1.42)).toBe('🦌 Chakra ≋≋≋≋≋≋∙∙∙∙ 58% · Stamina 50% (5h) · 両 $1.42')
+    expect(USAGE_STAMINA_AT).toBe(25)
+    expect(at(58, 24, 1.42)).toBe('🦌 Chakra ≋≋≋≋≋≋∙∙∙∙ 58% · 両 $1.42')
+    expect(at(58, 25, 1.42)).toBe('🦌 Chakra ≋≋≋≋≋≋∙∙∙∙ 58% · Stamina 25% (5h) · 両 $1.42')
     expect(at(58, 100, 1.42)).toContain('Stamina 100% (5h)')
     expect(at(58, 0, null)).toBe('🦌 Chakra ≋≋≋≋≋≋∙∙∙∙ 58%')
   })
@@ -286,12 +286,12 @@ describe('usage line: Chakra and cost always, Stamina from 50%', () => {
           columns: 80,
         }) ?? [],
       )
-    expect(line([['five_hour', 20], ['seven_day', 49.4]])).not.toContain('Stamina')
-    expect(line([['five_hour', 20], ['seven_day', 49.6]])).toContain('Stamina 50% (7d)')
+    expect(line([['five_hour', 20], ['seven_day', 24.4]])).not.toContain('Stamina')
+    expect(line([['five_hour', 20], ['seven_day', 24.6]])).toContain('Stamina 25% (7d)')
   })
 
   test('Chakra and cost are on the line whatever Stamina does, narrow included', () => {
-    for (const stamina of [0, 49, 50, 99]) {
+    for (const stamina of [0, 24, 25, 99]) {
       expect(at(30, stamina, 2.5, 80)).toContain('Chakra')
       expect(at(30, stamina, 2.5, 80)).toContain('両 $2.50')
       expect(at(30, stamina, 2.5, 40)).toContain('$2.50')
@@ -315,7 +315,7 @@ describe('usage line: Chakra and cost always, Stamina from 50%', () => {
     expect(at(20, 84, null)).not.toContain('Mendokus')
   })
 
-  test('on screen: 40% Stamina is hidden, 60% shows, with the cost on both', async ($, on) => {
+  test('on screen: 20% Stamina is hidden, 60% shows, with the cost on both', async ($, on) => {
     on('session.measure', (_$, e) => ({ changed: e.changed }))
     world(on, { DOJO_STRATEGIST: 'lelouch' })
     on('ui.render', { component: 'AbovePrompt' }, ($, e) => $.ui.resolve(e).Text({ children: 'ENGINE-BAND' }))
@@ -333,7 +333,7 @@ describe('usage line: Chakra and cost always, Stamina from 50%', () => {
       await ui.unmount()
       return row
     }
-    expect(await rowAfter(40)).toBe('♟️ Chakra ♞♞♞⋅⋅⋅⋅⋅⋅⋅ 30% · 両 $0.75')
+    expect(await rowAfter(20)).toBe('♟️ Chakra ♞♞♞⋅⋅⋅⋅⋅⋅⋅ 30% · 両 $0.75')
     expect(await rowAfter(60)).toBe('♟️ Chakra ♞♞♞⋅⋅⋅⋅⋅⋅⋅ 30% · Stamina 60% (5h) · 両 $0.75')
   })
 })

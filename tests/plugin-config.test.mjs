@@ -39,8 +39,8 @@ test('every setting has a type, a title and a description; the visual switches a
   }
 });
 
-test('the plugin and the package carry the same version, 0.8.0', () => {
-  assert.equal(plugin.version, '0.8.0');
+test('the plugin and the package carry the same version, 0.8.1', () => {
+  assert.equal(plugin.version, '0.8.1');
   assert.equal(pkg.version, plugin.version);
 });
 

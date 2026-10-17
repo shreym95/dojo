@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.1
+
+### Changed
+- Usage line: Stamina (busiest rate-limit window) now shows from 25% instead of 50%, so it no longer drops off for long after a window reset.
+
 ## 0.8.0
 
 ### Added

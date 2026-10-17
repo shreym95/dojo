@@ -53,7 +53,7 @@ Senku owns behaviour and data; Sanji owns presentation and interaction. The seam
 - **Crew moments**: one-line deploy, return, and fall lines with emoji and signature quote.
 - **Toasts**: in-character text on deploy (3s), return (5s), fall (6s), and rank-up (7s).
 - **Crew band**: one animated row per running subagent above the prompt (glyph, emoji, name, task, tool, elapsed time, live tokens).
-- **Usage line**: row above the prompt with context fill (Chakra), busiest rate-limit (Stamina, ≥50%), and cost (両).
+- **Usage line**: row above the prompt with context fill (Chakra), busiest rate-limit (Stamina, ≥25%), and cost (両).
 - **Spinners**: main thread shows strategist verbs; crew members show their own emoji and verbs.
 - **Palette mode**: light-theme colors on white, dark colors lifted to 4.5:1 on black across spinners, band, transcript, chrome.
 - **Transcript theme**: persona frame on strategist replies; crew cards in character colors on tool calls, results, errors.
@@ -91,7 +91,7 @@ Senku owns behaviour and data; Sanji owns presentation and interaction. The seam
 | `spinners` | true | Replace the spinner word with the on-duty strategist's (or crew member's) themed verbs. |
 | `turnFlair` | true | Past-tense themed word on the line that closes a turn (Outmaneuvered, Checkmated). |
 | `band` | true | Show one animated row per running dojo subagent above the prompt. |
-| `usageLine` | true | Show one row above the prompt with the session's context fill (Chakra) and the cost, plus the busiest rate-limit window (Stamina) once it passes 50%. |
+| `usageLine` | true | Show one row above the prompt with the session's context fill (Chakra) and the cost, plus the busiest rate-limit window (Stamina) once it passes 25%. |
 | `toasts` | true | Short in-character toast when a dojo subagent is deployed, returns or falls, and when the crew rank goes up. |
 | `neutralMainTheme` | true | When no strategist persona is detected, still theme the main spinner with a neutral strategist pool. |
 | `commitGate` | true | Force the configured commit trailer into git texts and deny git commit commands whose inline message breaks the commit rules (Conventional Commits subject, no body, exact trailer). Applies in every session. |
