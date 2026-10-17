@@ -73,7 +73,7 @@ export function charge(b: Budget, call: RoleCall, limits: RoleLimits, tmpDirs: r
         budget: b,
         added: false,
         denied: {
-          reason: `Inline lookup budget reached: ${b.lookups} WebSearch/WebFetch calls already made this turn (limit ${limits.lookups}). Delegate multi-source research to dojo:l, or a single-fact lookup to dojo:light, with a delegation brief.`,
+          reason: `Inline lookup budget reached: ${b.lookups} WebSearch/WebFetch calls already made this turn (limit ${limits.lookups}). Delegate multi-source research to dojo:jiraiya, or a single-fact lookup to dojo:light, with a delegation brief.`,
           toast: 'lookups',
         },
       }

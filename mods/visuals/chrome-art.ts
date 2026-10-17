@@ -8,7 +8,8 @@ export const FRAMES_MORE: Record<string, readonly string[]> = {
   strategist: ['◴', '◷', '◶', '◵'],
   senku: ['⚙', '⌬', '✦', '⚛'],
   sanji: ['≋', '♨', '≋', '∽'],
-  l: ['◒', '◐', '◓', '◑'],
+  kurisu: ['⊙', '⊚', '⊛', '⊚'],
+  jiraiya: ['◒', '◐', '◓', '◑'],
   light: ['✍', '✎', '✐', '✑'],
   levi: ['✖', '⟍', '⟋', '⌁'],
   robin: ['❃', '❋', '✺', '❀'],
@@ -24,7 +25,8 @@ export const VERBS_MORE: Record<string, readonly string[]> = {
   strategist: ['Weighing the plan', 'Splitting the work', 'Checking the last move'],
   senku: ['Measuring everything', 'Running the experiment', 'Crafting from scratch', 'Reading the data', 'Revival-Fluiding', 'Ten billion percent!'],
   sanji: ['Trimming the waste', 'Plating the layout', 'Reducing the sauce', 'Setting the table', 'Flambéing', 'Clearing the clutter'],
-  l: ['Ranking the witnesses', 'Cross-checking sources', 'Stating the odds', 'Naming the suspect', 'Following a lead'],
+  kurisu: ['Stating the premise', 'Drafting the diagram', 'Comparing the options', 'Proposing a POC', 'Testing the hypothesis', 'Listing the tradeoffs'],
+  jiraiya: ['Cross-checking sources', 'Naming the source', 'Dating the intel', 'Tailing a rumor', 'Reading the rumor mill', 'Sending out a toad'],
   light: ['Picking one source', 'Dating the answer', 'Answering in one line', 'Naming the source', 'Closing the notebook'],
   levi: ['Wiping every surface', 'Grading the dirt', 'Sweeping edge cases', 'Hunting dirty corners', 'Running the checks'],
   robin: ['Restoring inscriptions', 'Recording the history', 'Sprouting extra arms', 'Correcting the record', 'Reading on'],
@@ -34,7 +36,8 @@ export const VERBS_MORE: Record<string, readonly string[]> = {
 export const DEPLOY_MORE: Record<string, readonly string[]> = {
   senku: ['Get excited!', "Let's get building.", 'This is exhilarating!', 'Fresh variables!', 'Sosoru ze, kore wa!'],
   sanji: ['Order up.', 'Leave the rest to me.', 'The plate will be flawless.', 'Every guest served.', 'Hmph. Not on my watch.'],
-  l: ['I have a lead.', "Let's eliminate the suspects.", 'Interesting.', 'Probability pending.', 'Watashi wa L desu.'],
+  kurisu: ['Hypothesis first.', "Don't call me Christina.", "I'm not your assistant.", "Let's design this properly.", 'El Psy Kongroo.'],
+  jiraiya: ['Gallant, as always.', 'My network never sleeps.', 'Sources first.', 'Leave the digging to me.', 'Gama-sennin, reporting.'],
   light: ['Naturally.', 'Too easy.', 'A step ahead.', 'One source is enough.', 'Keikaku dōri.'],
   levi: ["Don't waste my time.", 'Tch. Let me see the filth.', 'Wipe it down.', 'Every corner.', 'Rittai Kidō Sōchi.'],
   robin: ['How interesting.', 'I want to know...', 'Shall we read on?', 'Only what is written.', 'Cien Fleur.'],
@@ -44,7 +47,8 @@ export const DEPLOY_MORE: Record<string, readonly string[]> = {
 export const FALL_LINES: Record<string, string> = {
   senku: "Failed experiment. That's data.",
   sanji: 'Spoiled ingredient.',
-  l: 'I suspected as much.',
+  kurisu: 'The model was wrong.',
+  jiraiya: 'The trail went cold.',
   light: 'An unexpected variable.',
   levi: 'Filthy.',
   robin: 'A forged inscription.',
@@ -54,7 +58,8 @@ export const FALL_LINES: Record<string, string> = {
 export const FALL_MORE: Record<string, readonly string[]> = {
   senku: ["That's data, not a failure.", 'Science does not care.'],
   sanji: ["I'll remake it.", 'A sloppy plate.'],
-  l: ['Probability revised down.', 'Suspicious.'],
+  kurisu: ['Revising the hypothesis.', 'Wrong world line.'],
+  jiraiya: ['The source dried up.', 'Even a sage slips.'],
   light: ['Noted, and corrected.', 'Predictable.'],
   levi: ['Clean it up.', 'Disgusting.'],
   robin: ['A worn inscription.', 'I will correct it.'],
@@ -64,7 +69,8 @@ export const FALL_MORE: Record<string, readonly string[]> = {
 export const RETURN_TOAST: Record<string, readonly string[]> = {
   senku: ['Experiment succeeded.', 'Science wins.', 'Hypothesis confirmed!', 'Kagaku Ōkoku!'],
   sanji: ['Served.', 'Bon appetit.', 'Flawless.', 'Order up.', 'Now that is a clean plate.', 'Merorin~'],
-  l: ['The case is closed.', 'Interesting.', 'I have a lead.', 'Watashi wa L desu.'],
+  kurisu: ['The design holds.', 'Hypothesis stated.', 'Options laid out.', 'It is only logical.', 'El Psy Kongroo.'],
+  jiraiya: ['Intel secured.', 'Sources confirmed.', 'The network delivered.', 'Gallant work.'],
   light: ['Done. Cleanly.', 'Exactly as expected.', 'Keikaku dōri.', 'As I calculated.'],
   levi: ['Inspection done.', 'Tch. Report is in.', 'Wiped it down.', 'Every corner checked.'],
   robin: ['The record stands.', 'The record is complete.', 'Fufu. Read and recorded.', 'How interesting.'],
@@ -86,12 +92,13 @@ export const TURN_LONG: Record<string, readonly string[]> = {
 /** Model per agent, copied from roster.mjs (the plugin's roster file is a build-time input, not imported here). */
 export const MODELS: Record<string, string> = {
   strategist: 'claude-opus-5-5',
-  senku: 'claude-sonnet-5-5',
-  sanji: 'claude-sonnet-5-5',
-  l: 'claude-haiku-4-5-20251001',
-  light: 'claude-haiku-4-5-20251001',
-  levi: 'claude-haiku-4-5-20251001',
-  robin: 'claude-haiku-4-5-20251001',
+  kurisu: 'claude-sonnet-5-5',
+  senku: 'claude-haiku-5-5',
+  sanji: 'claude-haiku-5-5',
+  jiraiya: 'claude-haiku-5-5',
+  light: 'claude-haiku-5-5',
+  levi: 'claude-haiku-5-5',
+  robin: 'claude-haiku-5-5',
 }
 
 /** The roster's default voice level (`defaults.voice`). */
@@ -164,7 +171,7 @@ export const RECAP_SIGNOFFS: Record<string, { clean: string; rough: string; empt
 // --- gallery -------------------------------------------------------------------------------------------------------
 
 /** Pages of /dojo-gallery, in order: the strategists, the neutral one, then the crew. */
-export const GALLERY_ORDER = ['shikamaru', 'lelouch', 'strategist', 'senku', 'sanji', 'l', 'light', 'levi', 'robin'] as const
+export const GALLERY_ORDER = ['shikamaru', 'lelouch', 'strategist', 'senku', 'sanji', 'kurisu', 'jiraiya', 'light', 'levi', 'robin'] as const
 
 /** A sample `Says:` line per character, for the gallery's speech bubble (the persona files' own examples). */
 export const SAYS_SAMPLES: Record<string, string> = {
@@ -173,7 +180,8 @@ export const SAYS_SAMPLES: Record<string, string> = {
   strategist: 'Plan set. Crew deployed.',
   senku: 'Hypothesis confirmed. Get excited!',
   sanji: 'Served. Merorin~ (swooning)',
-  l: 'I suspected as much. The case is closed.',
+  kurisu: "The design holds. Don't call me Christina.",
+  jiraiya: 'Sources confirmed. Gallant work.',
   light: 'Exactly as expected. Done. Cleanly.',
   levi: 'Mostly clean. Fix the corner I marked.',
   robin: 'The record stands. History as it was.',

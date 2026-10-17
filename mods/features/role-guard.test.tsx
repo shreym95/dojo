@@ -49,7 +49,7 @@ describe('role guard budgets', () => {
     let b = empty
     for (let n = 0; n < 3; n++) b = charge(b, call('WebSearch', { query: 'q' }), limits).budget
     const over = charge(b, call('WebFetch', { url: 'u' }), limits)
-    expect(over.denied?.reason).toMatch(/dojo:l.*dojo:light/)
+    expect(over.denied?.reason).toMatch(/dojo:jiraiya.*dojo:light/)
     expect(over.denied?.toast).toBe('lookups')
   })
 
@@ -128,12 +128,12 @@ describe('role guard', () => {
     expect((await $.tool.call(edit('/app/c.ts'))).deny).toBeUndefined()
   })
 
-  test('lookups: the fourth is denied toward dojo:l and dojo:light; toast in L voice', async ($, on) => {
+  test('lookups: the fourth is denied toward dojo:jiraiya and dojo:light; toast in Jiraiya voice', async ($, on) => {
     const { toasts } = core(on, DOJO)
     for (const tool of ['WebSearch', 'WebFetch', 'WebSearch']) expect((await $.tool.call({ tool } as never)).deny).toBeUndefined()
     const r = await $.tool.call({ tool: 'WebFetch', url: 'u', prompt: 'p' } as never)
-    expect(r.deny).toMatch(/dojo:l\b.*dojo:light/)
-    expect(toasts).toEqual(['🍰 L: "Hm. Too many searches for one head. Delegate the investigation."'])
+    expect(r.deny).toMatch(/dojo:jiraiya.*dojo:light/)
+    expect(toasts).toEqual(['🐸 Jiraiya: "Too many searches for one head, kid. Send the investigation to my network."'])
   })
 
   test('a call core refuses gives its budget back', async ($, on) => {

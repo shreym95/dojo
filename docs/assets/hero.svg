@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="t d">
+<title id="t">dojo</title>
+<desc id="d">dojo, an anime crew for Claude Code: the nine characters Shikamaru, Lelouch, Kurisu, Senku, Sanji, Jiraiya, Levi, Light and Robin.</desc>
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0d1117"/><stop offset="1" stop-color="#161b22"/></linearGradient>
+<pattern id="wave" width="48" height="24" patternUnits="userSpaceOnUse"><g fill="none" stroke="#8b949e" stroke-width="1"><path d="M0 24a24 24 0 0 1 48 0"/><path d="M8 24a16 16 0 0 1 32 0"/><path d="M16 24a8 8 0 0 1 16 0"/><path d="M-24 12a24 24 0 0 1 48 0"/><path d="M-16 12a16 16 0 0 1 32 0"/><path d="M-8 12a8 8 0 0 1 16 0"/><path d="M24 12a24 24 0 0 1 48 0"/><path d="M32 12a16 16 0 0 1 32 0"/><path d="M40 12a8 8 0 0 1 16 0"/></g></pattern>
+<linearGradient id="fade" x1="0" y1="0" x2="1" y2="0"><stop offset="0.45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity="1"/></linearGradient>
+<mask id="m"><rect width="1200" height="360" fill="url(#fade)"/></mask>
+</defs>
+<rect x="0.5" y="0.5" width="1199" height="359" rx="18" fill="url(#bg)" stroke="#30363d"/>
+<rect x="1" y="1" width="1198" height="358" rx="17" fill="url(#wave)" opacity="0.16" mask="url(#m)"/>
+<text x="60" y="122" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="104" font-weight="800" fill="#e6edf3" letter-spacing="-2">dojo</text>
+<text x="318" y="120" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="38" fill="#8b949e">道場</text>
+<text x="62" y="170" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" fill="#c9d1d9">An anime crew for Claude Code: a strategist, seven specialists, and a terminal that shows their personality.</text>
+<rect x="62.0" y="192" width="26.7" height="5" fill="#5B8C5A"/>
+<rect x="88.7" y="192" width="26.7" height="5" fill="#9E62CA"/>
+<rect x="115.3" y="192" width="26.7" height="5" fill="#C35B38"/>
+<rect x="142.0" y="192" width="26.7" height="5" fill="#8BC34A"/>
+<rect x="168.7" y="192" width="26.7" height="5" fill="#F4C430"/>
+<rect x="195.3" y="192" width="26.7" height="5" fill="#2E9E7F"/>
+<rect x="222.0" y="192" width="26.7" height="5" fill="#708090"/>
+<rect x="248.7" y="192" width="26.7" height="5" fill="#C55959"/>
+<rect x="275.3" y="192" width="26.7" height="5" fill="#E07AA5"/>
+<rect x="86.0" y="226" width="68" height="68" rx="16" fill="#5B8C5A" fill-opacity="0.16" stroke="#5B8C5A" stroke-width="2"/>
+<text x="120.0" y="271" text-anchor="middle" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="34">🦌</text>
+<text x="120.0" y="324" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" fill="#5B8C5A">Shikamaru</text>
+<rect x="206.0" y="226" width="68" height="68" rx="16" fill="#9E62CA" fill-opacity="0.16" stroke="#9E62CA" stroke-width="2"/>
+<text x="240.0" y="271" text-anchor="middle" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="34">♟️</text>
+<text x="240.0" y="324" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" fill="#9E62CA">Lelouch</text>
+<rect x="326.0" y="226" width="68" height="68" rx="16" fill="#C35B38" fill-opacity="0.16" stroke="#C35B38" stroke-width="2"/>
+<text x="360.0" y="271" text-anchor="middle" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="34">🔬</text>
+<text x="360.0" y="324" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" fill="#C35B38">Kurisu</text>
+<rect x="446.0" y="226" width="68" height="68" rx="16" fill="#8BC34A" fill-opacity="0.16" stroke="#8BC34A" stroke-width="2"/>
+<text x="480.0" y="271" text-anchor="middle" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="34">🧪</text>
+<text x="480.0" y="324" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" fill="#8BC34A">Senku</text>
+<rect x="566.0" y="226" width="68" height="68" rx="16" fill="#F4C430" fill-opacity="0.16" stroke="#F4C430" stroke-width="2"/>
+<text x="600.0" y="271" text-anchor="middle" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="34">🍳</text>
+<text x="600.0" y="324" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" fill="#F4C430">Sanji</text>
+<rect x="686.0" y="226" width="68" height="68" rx="16" fill="#2E9E7F" fill-opacity="0.16" stroke="#2E9E7F" stroke-width="2"/>
+<text x="720.0" y="271" text-anchor="middle" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="34">🐸</text>
+<text x="720.0" y="324" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" fill="#2E9E7F">Jiraiya</text>
+<rect x="806.0" y="226" width="68" height="68" rx="16" fill="#708090" fill-opacity="0.16" stroke="#708090" stroke-width="2"/>
+<text x="840.0" y="271" text-anchor="middle" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="34">🧹</text>
+<text x="840.0" y="324" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" fill="#708090">Levi</text>
+<rect x="926.0" y="226" width="68" height="68" rx="16" fill="#C55959" fill-opacity="0.16" stroke="#C55959" stroke-width="2"/>
+<text x="960.0" y="271" text-anchor="middle" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="34">📓</text>
+<text x="960.0" y="324" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" fill="#C55959">Light</text>
+<rect x="1046.0" y="226" width="68" height="68" rx="16" fill="#E07AA5" fill-opacity="0.16" stroke="#E07AA5" stroke-width="2"/>
+<text x="1080.0" y="271" text-anchor="middle" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="34">🌸</text>
+<text x="1080.0" y="324" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" fill="#E07AA5">Robin</text>
+</svg>

@@ -89,7 +89,7 @@ describe('voice override on spawn', () => {
     const seen = spawnSeen(on)
     await $.command.run(slash('dojo-voice', 'subtle'))
     await $.agent.spawn(spawnInput('dojo:senku', 'sonnet'))
-    await $.agent.spawn(spawnInput('dojo:l'))
+    await $.agent.spawn(spawnInput('dojo:jiraiya'))
     const first = seen[0]
     expect(first?.prompt.startsWith('build it\n\n## Voice level override\n')).toBe(true)
     expect(first?.prompt).toContain('"subtle"')

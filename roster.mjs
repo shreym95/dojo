@@ -22,7 +22,8 @@ export default {
     lelouch: 'Lelouch',
     senku: 'Senku',
     sanji: 'Sanji',
-    l: 'L',
+    jiraiya: 'Jiraiya',
+    kurisu: 'Kurisu',
     light: 'Light',
     levi: 'Levi',
     robin: 'Robin',
@@ -34,10 +35,10 @@ export default {
       role: 'strategist',
       summary: 'orchestrator and integrator',
       model: 'claude-opus-5-5',
-      effort: 'high',
+      effort: 'medium',
       color: 'purple',
       tools: [
-        'Agent(dojo:senku, dojo:sanji, dojo:l, dojo:light, dojo:levi, dojo:robin)',
+        'Agent(dojo:senku, dojo:sanji, dojo:kurisu, dojo:jiraiya, dojo:light, dojo:levi, dojo:robin)',
         'Read', 'Grep', 'Glob', 'Bash', 'Edit', 'Write',
       ],
       description:
@@ -48,8 +49,8 @@ export default {
       personas: ['senku'],
       role: 'backend',
       summary: 'backend builder',
-      model: 'claude-sonnet-5-5',
-      effort: 'high',
+      model: 'claude-haiku-5-5',
+      effort: 'medium',
       color: 'green',
       tools: ['Read', 'Edit', 'Write', 'Bash', 'Grep', 'Glob'],
       description:
@@ -60,45 +61,58 @@ export default {
       personas: ['sanji'],
       role: 'frontend',
       summary: 'frontend builder',
-      model: 'claude-sonnet-5-5',
-      effort: 'high',
+      model: 'claude-haiku-5-5',
+      effort: 'medium',
       color: 'yellow',
       tools: ['Read', 'Edit', 'Write', 'Bash', 'Grep', 'Glob'],
       description:
         'Frontend builder. Use for UI: components, styling, layout, accessibility, client state, frontend tests. ' +
         'Do NOT use for backend/APIs, web research, or QA sign-off.',
     },
-    l: {
-      personas: ['l'],
+    kurisu: {
+      personas: ['kurisu'],
+      role: 'architect',
+      summary: 'solutions architect',
+      model: 'claude-sonnet-5-5',
+      effort: 'medium',
+      color: 'orange',
+      tools: ['WebSearch', 'WebFetch', 'Read', 'Grep', 'Glob', 'Bash', 'Edit', 'Write'],
+      description:
+        'Solutions architect. Use for options and trade-offs, solution designs, hypotheses and test methodology, and small POCs ' +
+        'in scratch or an isolated worktree, as input to the strategist\'s decision. ' +
+        'Does NOT decide, implement final code, or do broad web research (use dojo:jiraiya).',
+    },
+    jiraiya: {
+      personas: ['jiraiya'],
       role: 'research-deep',
-      summary: 'deep web researcher',
-      model: 'claude-haiku-4-5-20251001',
-      effort: 'high',
+      summary: 'web researcher',
+      model: 'claude-haiku-5-5',
+      effort: 'medium',
       color: 'blue',
       tools: ['WebSearch', 'WebFetch', 'Read', 'Grep', 'Glob'],
       description:
-        'Deep web researcher. Use for multi-source investigation: comparing libraries/approaches, root-causing obscure errors, ' +
-        'reading docs/changelogs, with confidence levels and citations. Read-only. ' +
-        'Do NOT use for quick single facts (use dojo:light) or writing code.',
+        'Pure multi-source web researcher. Use for investigations across several sources: docs, changelogs, issue trackers, comparisons of facts, ' +
+        'with citations and confidence levels. Read-only. Makes no recommendations, designs or code. ' +
+        'Do NOT use for quick single facts (use dojo:light) or for options and designs (use dojo:kurisu).',
     },
     light: {
       personas: ['light'],
       role: 'research-quick',
       summary: 'quick fact-finder',
-      model: 'claude-haiku-4-5-20251001',
-      effort: 'high',
+      model: 'claude-haiku-5-5',
+      effort: 'low',
       color: 'red',
       tools: ['WebSearch', 'WebFetch'],
       description:
         'Quick fact-finder. Use for one fast answer from one authoritative source: a version number, an API signature, a flag name, a date. ' +
-        'Do NOT use for comparisons or deep investigation (use dojo:l) or code.',
+        'Do NOT use for comparisons or deep investigation (use dojo:jiraiya) or code.',
     },
     levi: {
       personas: ['levi'],
       role: 'qa',
       summary: 'QA inspector',
-      model: 'claude-haiku-4-5-20251001',
-      effort: 'high',
+      model: 'claude-haiku-5-5',
+      effort: 'medium',
       color: 'cyan',
       tools: ['Read', 'Grep', 'Glob', 'Bash'],
       description:
@@ -109,8 +123,8 @@ export default {
       personas: ['robin'],
       role: 'docs',
       summary: 'documentation writer',
-      model: 'claude-haiku-4-5-20251001',
-      effort: 'high',
+      model: 'claude-haiku-5-5',
+      effort: 'low',
       color: 'pink',
       tools: ['Read', 'Grep', 'Glob', 'Edit', 'Write'],
       description:

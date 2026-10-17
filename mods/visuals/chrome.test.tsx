@@ -21,6 +21,7 @@ import {
 } from './chrome-art'
 import {
   addStats,
+  agentTokens,
   barGlyphs,
   fmtDuration,
   fmtTokens,
@@ -32,8 +33,8 @@ import {
   rankUpText,
   recapLines,
   recapText,
+  stepTokens,
   tint,
-  tokensOf,
   wrapWords,
 } from './chrome-lib'
 import { BANNERS } from './transcript-art'
@@ -115,7 +116,7 @@ describe('band', () => {
     const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
     const rows = (await ui.findAll({ type: 'Text' })).filter(t => t.props.wrap === 'truncate-end')
     expect(rows).toHaveLength(1)
-    expect(rows[0]?.text).toMatch(/^\S 🧹 Levi {3}QA the cart {2,}0s$/)
+    expect(rows[0]?.text).toMatch(/^\S 🧹 Levi {5}QA the cart {2,}0s$/)
     await ui.unmount()
   })
 })
@@ -373,9 +374,9 @@ describe('band, themed', () => {
     const texts = await ui.findAll({ type: 'Text' })
     const rowsOf = (all: typeof texts) => all.filter(t => t.props.wrap === 'truncate-end').map(t => t.text)
     expect(rowsOf(texts)).toEqual([
-      band80('⚔ 🧹 Levi   QA the cart'),
-      band80('⚗ 🧪 Senku  build the api'),
-      band80('❀ 🌸 Robin  write docs'),
+      band80('⚔ 🧹 Levi     QA the cart'),
+      band80('⚗ 🧪 Senku    build the api'),
+      band80('❀ 🌸 Robin    write docs'),
     ])
     // the glyph-and-emoji run and the name run of each row, all in the character's color
     expect(texts.filter(t => t.props.color !== undefined).map(t => t.props.color)).toEqual(['#708090', '#708090', '#8BC34A', '#8BC34A', '#E07AA5', '#E07AA5'])
@@ -383,7 +384,7 @@ describe('band, themed', () => {
     // each character animates through its own frames
     await w.clock.advance(250)
     const moved = rowsOf(await ui.findAll({ type: 'Text' }))
-    expect(moved).toEqual([band80('⟋ 🧹 Levi   QA the cart'), band80('⚛ 🧪 Senku  build the api'), band80('✿ 🌸 Robin  write docs')])
+    expect(moved).toEqual([band80('⟋ 🧹 Levi     QA the cart'), band80('⚛ 🧪 Senku    build the api'), band80('✿ 🌸 Robin    write docs')])
     await ui.unmount()
   })
 
@@ -393,7 +394,7 @@ describe('band, themed', () => {
     bottomBand(on)
     await $.agent.spawn(spawnInput('dojo:levi', undefined, 'QA the cart'))
     const ui = await mountBand($)
-    expect((await ui.findAll({ type: 'Text' })).map(t => t.text)[0]).toBe(band80('⚔ 🧹 Levi   QA the cart'))
+    expect((await ui.findAll({ type: 'Text' })).map(t => t.text)[0]).toBe(band80('⚔ 🧹 Levi     QA the cart'))
     await ui.unmount()
   })
 
@@ -405,7 +406,7 @@ describe('band, themed', () => {
     await $.agent.spawn(spawnInput('dojo:levi', undefined, 'QA the cart'))
     await $.tool.call({ tool: 'Bash', input: { command: 'npm test' }, command: 'npm test', agentId: 'ag-1' } as never)
     const ui = await mountBand($)
-    expect((await ui.findAll({ type: 'Text' }))[0]?.text).toBe(band80('⚔ 🧹 Levi   QA the cart · Bash'))
+    expect((await ui.findAll({ type: 'Text' }))[0]?.text).toBe(band80('⚔ 🧹 Levi     QA the cart · Bash'))
     await ui.unmount()
   })
 
@@ -433,7 +434,7 @@ describe('band, themed', () => {
     await one.unmount()
     const two = await mountBand($, { maxRows: 2 })
     expect((await two.findAll({ type: 'Text' })).filter(t => t.props.wrap === 'truncate-end').map(t => t.text)).toEqual([
-      band80('⚔ 🧹 Levi   QA the cart'),
+      band80('⚔ 🧹 Levi     QA the cart'),
       '+2 more',
     ])
     await two.unmount()
@@ -446,7 +447,7 @@ describe('band, themed', () => {
     await $.agent.spawn(spawnInput('dojo:levi', undefined, 'QA the cart'))
     const ui = await mountBand($, {}, 'desktop')
     expect((await ui.findAll({ type: 'Text' })).filter(t => t.props.wrap === 'truncate-end').map(t => t.text)).toEqual([
-      band80('⚔ 🧹 Levi   QA the cart'),
+      band80('⚔ 🧹 Levi     QA the cart'),
     ])
     await ui.unmount()
   })
@@ -596,19 +597,35 @@ describe('usage line', () => {
     await noCost.unmount()
   })
 
-  test('the crew band still draws below the usage row, in what room is left', async ($, on) => {
+  test('the crew band draws above the usage row, in what room is left', async ($, on) => {
     const w = usageWorld(on, { env: { DOJO_STRATEGIST: 'shikamaru' } })
     w.setAgents([agent('ag-1', 'dojo:levi', 'running', 'QA the cart')])
     bottomBand(on)
     await $.session.measure(measure({ percent: 58, usd: 1.42 }) as never)
     await $.agent.spawn(spawnInput('dojo:levi', undefined, 'QA the cart'))
     const ui = await mountBand($)
-    expect(await textsOf(ui)).toEqual(['🦌 Chakra ≋≋≋≋≋≋∙∙∙∙ 58% · 両 $1.42', band80('⚔ 🧹 Levi   QA the cart')])
+    expect(await textsOf(ui)).toEqual([band80('⚔ 🧹 Levi     QA the cart'), '🦌 Chakra ≋≋≋≋≋≋∙∙∙∙ 58% · 両 $1.42'])
     await ui.unmount()
     // one row to spare: the crew keeps it
     const tight = await mountBand($, { maxRows: 1 })
-    expect(await textsOf(tight)).toEqual([band80('⚔ 🧹 Levi   QA the cart')])
+    expect(await textsOf(tight)).toEqual([band80('⚔ 🧹 Levi     QA the cart')])
     await tight.unmount()
+  })
+
+  test('two crew out: both band rows first, the usage line last', async ($, on) => {
+    const w = usageWorld(on, { env: { DOJO_STRATEGIST: 'shikamaru' } })
+    w.setAgents([agent('ag-1', 'dojo:levi', 'running', 'QA the cart'), agent('ag-2', 'dojo:senku', 'running', 'build the api')])
+    bottomBand(on)
+    await $.session.measure(measure({ percent: 58, usd: 1.42 }) as never)
+    await $.agent.spawn(spawnInput('dojo:levi', undefined, 'QA the cart'))
+    await $.agent.spawn(spawnInput('dojo:senku', undefined, 'build the api'))
+    const ui = await mountBand($)
+    const rows = await textsOf(ui)
+    expect(rows).toHaveLength(3)
+    expect(rows[0]).toMatch(/Levi {5}QA the cart/)
+    expect(rows[1]).toMatch(/Senku {4}build the api/)
+    expect(rows[2]).toBe('🦌 Chakra ≋≋≋≋≋≋∙∙∙∙ 58% · 両 $1.42')
+    await ui.unmount()
   })
 
   test('before any measurement the line is seeded from the session usage', async ($, on) => {
@@ -656,7 +673,7 @@ describe('usage line', () => {
     await plain.unmount()
     await $.agent.spawn(spawnInput('dojo:levi', undefined, 'QA the cart'))
     const ui = await mountBand($)
-    expect(await textsOf(ui)).toEqual([band80('⚔ 🧹 Levi   QA the cart')])
+    expect(await textsOf(ui)).toEqual([band80('⚔ 🧹 Levi     QA the cart')])
     await ui.unmount()
   })
 
@@ -798,7 +815,7 @@ describe('/dojo roster', () => {
     bottomPane(on)
     const ui = await mountPane($)
     const out = await lines(ui)
-    expect(out.slice(0, 3)).toEqual(['🦌 Shikamaru on duty', 'voice: medium (roster default) · opus 5.5', 'crew: 0 running · 0 returned · 0 fell · 6 idle'])
+    expect(out.slice(0, 3)).toEqual(['🦌 Shikamaru on duty', 'voice: medium (roster default) · opus 5.5', 'crew: 0 running · 0 returned · 0 fell · 7 idle'])
     for (const c of Object.values(CREW)) {
       const row = out.find(l => l.includes(c.name) && l.includes(c.role))
       expect(row).toBeDefined()
@@ -806,8 +823,8 @@ describe('/dojo roster', () => {
       expect(row).toContain('idle')
       expect(row).toContain(modelLabel(MODELS[c.key] ?? ''))
     }
-    expect(out.find(l => l.includes('Senku'))).toContain('sonnet 5.5')
-    expect(out.find(l => l.includes('Levi'))).toContain('haiku 4.5')
+    expect(out.find(l => l.includes('Senku'))).toContain('haiku 5.5')
+    expect(out.find(l => l.includes('Levi'))).toContain('haiku 5.5')
     expect((await ui.find({ type: 'Button' }))?.props.label).toBe('close')
     await ui.unmount()
   })
@@ -835,7 +852,7 @@ describe('/dojo roster', () => {
 
     const ui = await mountPane($)
     const out = await lines(ui)
-    expect(out[2]).toBe('crew: 1 running · 1 returned · 1 fell · 3 idle')
+    expect(out[2]).toBe('crew: 1 running · 1 returned · 1 fell · 4 idle')
     expect(out.find(l => l.includes('Levi'))).toMatch(/✔ returned/)
     expect(out).toContain('   “Mostly clean. Fix the corner I marked.”')
     expect(out.find(l => l.includes('Senku'))).toMatch(/✖ fell/)
@@ -924,7 +941,7 @@ describe('sounds', () => {
     ])
     expect(w.played).toEqual([SOUNDS.deploy])
     await w.clock.advance(CUE_GAP_MS - 1)
-    await $.agent.spawn(spawnInput('dojo:l', undefined, 'd'))
+    await $.agent.spawn(spawnInput('dojo:jiraiya', undefined, 'd'))
     expect(w.played).toHaveLength(1)
     await w.clock.advance(1)
     await $.agent.spawn(spawnInput('dojo:light', undefined, 'e'))
@@ -1122,6 +1139,31 @@ function crewRuns(w: ReturnType<typeof world>, $: Engine) {
     await w.clock.advance(1000)
     if (run !== undefined) await $.turn.complete(doneWith(id, run.answer, run.ms, run.input, run.output))
     w.setAgents([agent(id, type, status, 'work')])
+    await w.clock.advance(300)
+  }
+}
+
+type StepUsage = { input_tokens: number; output_tokens: number; cache_read_input_tokens: number; cache_creation_input_tokens: number }
+
+/** Deploys one crew member whose model requests report `steps`, and lets it end with the last one as its final turn. */
+function stepRuns(on: On, w: ReturnType<typeof world>, $: Engine) {
+  let current: StepUsage | undefined
+  on('turn.step', async function* (_$, e) {
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn' as const, usage: current === undefined ? null : { model: 'm', ...current } }
+  })
+  let n = 100
+  return async (type: string, steps: StepUsage[], ms: number) => {
+    const id = `ag-${++n}`
+    w.setAgents([agent(id, type, 'running', 'work')])
+    await $.agent.spawn(spawnInput(type, undefined, 'work'))
+    await w.clock.advance(1000)
+    for (const u of steps) {
+      current = u
+      for await (const chunk of $.turn.step({ turnId: 't1', index: 0, model: 'm', messageCount: 3, agentId: id })) void chunk
+    }
+    const last = steps[steps.length - 1]
+    await $.turn.complete({ answer: 'ok', durationMs: ms, isAborted: false, turnId: 't1', agentId: id, reason: 'answer', ...(last === undefined ? {} : { usage: { model: 'm', ...last } }) } as never)
+    w.setAgents([agent(id, type, 'completed', 'work')])
     await w.clock.advance(300)
   }
 }
@@ -1358,9 +1400,29 @@ describe('crew stats and rank pure helpers', () => {
     expect(next.levi).toEqual({ runs: 2, returned: 1, fell: 0, ms: 1500, tokens: 15 })
     expect(base.levi.runs).toBe(1)
     expect(addStats({}, 'senku', { fell: 1 }).senku).toEqual({ runs: 0, returned: 0, fell: 1, ms: 0, tokens: 0 })
-    expect(tokensOf({ input_tokens: 100, output_tokens: 20, cache_read_input_tokens: 9999 })).toBe(120)
-    expect(tokensOf(undefined)).toBe(0)
-    expect(tokensOf({ input_tokens: 'x', output_tokens: -4 })).toBe(0)
+  })
+
+  test('stepTokens replaces the input (both cache fields included) and sums the output; agentTokens adds them', () => {
+    const zero = { latestInput: 0, cumOutput: 0 }
+    const usage = (input_tokens: number, output_tokens: number, cache_read_input_tokens?: number, cache_creation_input_tokens?: number) => ({
+      input_tokens,
+      output_tokens,
+      ...(cache_read_input_tokens === undefined ? {} : { cache_read_input_tokens }),
+      ...(cache_creation_input_tokens === undefined ? {} : { cache_creation_input_tokens }),
+    })
+    const one = stepTokens(zero, usage(10, 500, 70_000, 200))
+    expect(one).toEqual({ latestInput: 70_210, cumOutput: 500 })
+    const two = stepTokens(one, usage(20, 400, 78_000, 0))
+    expect(two).toEqual({ latestInput: 78_020, cumOutput: 900 })
+    const three = stepTokens(two, usage(30, 100))
+    expect(three).toEqual({ latestInput: 30, cumOutput: 1000 })
+    expect(agentTokens(two)).toBe(78_920)
+    expect(fmtTokens(agentTokens(two))).toBe('78.9k')
+    expect(zero).toEqual({ latestInput: 0, cumOutput: 0 })
+    // no usage, or something unreadable: the state stands
+    expect(stepTokens(two, undefined)).toBe(two)
+    expect(stepTokens(two, null)).toBe(two)
+    expect(stepTokens(zero, { input_tokens: 'x', output_tokens: -4 })).toEqual(zero)
   })
 
   test('rank thresholds: 0, 25, 100 and 300, with progress to the next rung', () => {
@@ -1415,6 +1477,21 @@ describe('crew stats and rank pure helpers', () => {
 describe('/dojo crew stats and rank header', () => {
   const lines = async (ui: Awaited<ReturnType<typeof mountPaneFor>>) => textsIn(ui)
 
+  test("the figure under a member is Claude Code's own: the latest prompt plus all output, summed over its runs", async ($, on) => {
+    const w = world(on, { env: { DOJO_STRATEGIST: 'shikamaru' } })
+    bottomPaneFor(on)
+    const run = stepRuns(on, w, $)
+    const u = (input_tokens: number, output_tokens: number, cache_read_input_tokens: number): StepUsage => ({ input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens: 0 })
+    // 78,020 + 900 = 78,920 for the first run, 1,000 + 200 = 1,200 for the second
+    await run('dojo:senku', [u(10, 500, 70_000), u(20, 400, 78_000)], 60_000)
+    await run('dojo:senku', [u(1000, 200, 0)], 30_000)
+    const ui = await mountPaneFor($, 'dojo-roster')
+    const out = await lines(ui)
+    const at = out.findIndex(l => l.includes('Senku'))
+    expect(out[at + 1]).toContain('2 runs · 1m 30s · 80.1k tokens')
+    await ui.unmount()
+  })
+
   test('runs, run time, tokens and the most-deployed badge under each member that ran', async ($, on) => {
     const w = world(on, { env: { DOJO_STRATEGIST: 'shikamaru' } })
     bottomPaneFor(on)
@@ -1430,7 +1507,7 @@ describe('/dojo crew stats and rank header', () => {
     expect(out[senku + 1]).toBe('   1 run · 5s')
     // members that never ran gain no line
     const sanji = out.findIndex(l => l.includes('Sanji'))
-    expect(out[sanji + 1]).toContain('L')
+    expect(out[sanji + 1]).toContain('Kurisu')
     expect(out.filter(l => l.includes('most deployed'))).toHaveLength(1)
     await ui.unmount()
   })
@@ -1666,6 +1743,16 @@ describe('/dojo-recap', () => {
     expect(ran.text).toContain(`“${RECAP_SIGNOFFS.lelouch?.empty}”`)
   })
 
+  test("the member line sums each run's final figure by Claude Code's formula", async ($, on) => {
+    const { w } = await state($, on)
+    const run = stepRuns(on, w, $)
+    const u = (input_tokens: number, output_tokens: number, cache_read_input_tokens: number): StepUsage => ({ input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens: 0 })
+    await run('dojo:senku', [u(10, 500, 70_000), u(20, 400, 78_000)], 60_000)
+    const ui = await mountPaneFor($, 'dojo-recap')
+    expect(await textsIn(ui)).toContain('🧪 Senku   1 run · 1m 00s · 78.9k tokens')
+    await ui.unmount()
+  })
+
   test('who was deployed, their time and last Says, the fall on its member line, the final figures, the rank and the sign-off', async ($, on) => {
     const { run } = await state($, on)
     await $.session.measure(measureOf(58, 1.42) as never)
@@ -1676,10 +1763,10 @@ describe('/dojo-recap', () => {
     const out = await textsIn(ui)
     expect(out[0]).toMatch(/^◖═ 📜 Mission report ═+◗$/)
     expect(out).toContain('🦌 Shikamaru on duty')
-    expect(out).toContain('Deployed: 2 of 6 crew · 3 runs')
-    expect(out).toContain('🧹 Levi  2 runs · 3m 12s · 14.2k tokens')
+    expect(out).toContain('Deployed: 2 of 7 crew · 3 runs')
+    expect(out).toContain('🧹 Levi    2 runs · 3m 12s · 14.2k tokens')
     expect(out).toContain('   “Mostly clean. Fix the corner I marked.”')
-    expect(out).toContain('🧪 Senku 1 run ✖ fell ×1')
+    expect(out).toContain('🧪 Senku   1 run ✖ fell ×1')
     expect(out.some(l => l.startsWith('Fallen'))).toBe(false)
     expect(out).toContain('Final context 58% · cost $1.42')
     expect(out.find(l => l.startsWith('Rank:'))).toContain('Genin')
@@ -1698,7 +1785,7 @@ describe('/dojo-recap', () => {
     const out = await textsIn(ui)
     expect(out.some(l => l.includes('fell') || l.startsWith('Fallen'))).toBe(false)
     expect(out).toContain(`♟️ “${RECAP_SIGNOFFS.lelouch?.clean}”`)
-    expect(out).toContain('🌸 Robin 1 run · 7s')
+    expect(out).toContain('🌸 Robin   1 run · 7s')
     expect(out.find(l => l.startsWith('Rank:'))).toContain('Pawn')
     await ui.unmount()
   })
@@ -1778,7 +1865,7 @@ describe('/dojo-gallery', () => {
     expect(w.opened).toEqual(['dojo-gallery'])
     const ui = await mountPaneFor($, 'dojo-gallery')
     const page = await pageOf(ui)
-    expect(page[0]).toBe('🦌 Shikamaru · strategist  1/9')
+    expect(page[0]).toBe('🦌 Shikamaru · strategist  1/10')
     for (const row of BANNERS.shikamaru ?? []) expect(page).toContain(row)
     expect(page.find(l => l.startsWith('Colors'))).toContain(tint('shikamaru', 'dark'))
     expect(page.find(l => l.startsWith('Colors'))).toContain(accentFor('shikamaru', 'dark'))
@@ -1799,7 +1886,7 @@ describe('/dojo-gallery', () => {
     // sanji is the fifth page
     for (let i = 0; i < 4; i++) await ui.press({ key: 'next' })
     const page = await pageOf(ui)
-    expect(page[0]).toBe('🍳 Sanji · frontend  5/9')
+    expect(page[0]).toBe('🍳 Sanji · frontend  5/10')
     expect(page.find(l => l.startsWith('Deploy'))).toContain('“Allow me.”')
     expect(page.find(l => l.startsWith('Return'))).toContain('“Served.”')
     expect(page.find(l => l.startsWith('Fallen'))).toContain(`“${FALL_LINES.sanji}”`)
@@ -1814,15 +1901,15 @@ describe('/dojo-gallery', () => {
     bottomPaneFor(on)
     const ui = await mountPaneFor($, 'dojo-gallery')
     const head = async () => (await pageOf(ui))[0]
-    expect(await head()).toContain('1/9')
+    expect(await head()).toContain('1/10')
     await ui.press({ key: 'prev' })
-    expect(await head()).toBe('🌸 Robin · docs  9/9')
+    expect(await head()).toBe('🌸 Robin · docs  10/10')
     await ui.press({ key: 'next' })
-    expect(await head()).toBe('🦌 Shikamaru · strategist  1/9')
+    expect(await head()).toBe('🦌 Shikamaru · strategist  1/10')
     await ui.press({ key: 'next' })
-    expect(await head()).toBe('♟️ Lelouch · strategist  2/9')
+    expect(await head()).toBe('♟️ Lelouch · strategist  2/10')
     await ui.press({ key: 'next' })
-    expect(await head()).toBe('🎴 Strategist · strategist  3/9')
+    expect(await head()).toBe('🎴 Strategist · strategist  3/10')
     await ui.unmount()
   })
 
@@ -1847,7 +1934,7 @@ describe('/dojo-gallery', () => {
     expect(narrow).not.toContain(BANNERS.shikamaru?.[0])
     expect(narrow.some(l => l.startsWith('Colors'))).toBe(true)
     expect(galleryKey(-1)).toBe('robin')
-    expect(galleryKey(9)).toBe('shikamaru')
+    expect(galleryKey(10)).toBe('shikamaru')
     expect(galleryKey(Number.NaN)).toBe('shikamaru')
   })
 
@@ -1870,7 +1957,7 @@ describe('/dojo-gallery', () => {
   test('the plain-text fallback is the current page', async ($, on) => {
     world(on, { placed: false })
     const ran = await $.command.run(slash('dojo-gallery'))
-    expect(ran.text).toContain('Shikamaru · strategist  1/9')
+    expect(ran.text).toContain('Shikamaru · strategist  1/10')
     expect(ran.text).toContain(SAYS_SAMPLES.shikamaru)
   })
 
@@ -1900,5 +1987,115 @@ describe('/dojo-gallery', () => {
     const ui = await mountPaneFor($, 'dojo-gallery', { bodyColumns: Number.NaN })
     expect((await textsIn(ui)).length).toBeGreaterThan(0)
     await ui.unmount()
+  })
+})
+
+describe('kurisu and jiraiya', () => {
+  const pair = [
+    { key: 'kurisu', emoji: '🔬', name: 'Kurisu', role: 'architect', model: 'sonnet 5.5' },
+    { key: 'jiraiya', emoji: '🐸', name: 'Jiraiya', role: 'web research', model: 'haiku 5.5' },
+  ] as const
+
+  test('toasts: deploy with the original line, a return with and without Says, a fall', async ($, on) => {
+    const w = world(on)
+    for (const [i, c] of pair.entries()) {
+      const id = `ag-${i + 1}`
+      w.setAgents([agent(id, `dojo:${c.key}`, 'running')])
+      await $.agent.spawn(spawnInput(`dojo:${c.key}`, undefined, 'a'))
+    }
+    expect(w.toasts).toEqual([`🔬 Kurisu deployed — “${WORDS.kurisu?.deploy}”`, `🐸 Jiraiya deployed — “${WORDS.jiraiya?.deploy}”`])
+    w.setAgents([agent('ag-1', 'dojo:kurisu', 'running'), agent('ag-2', 'dojo:jiraiya', 'running')])
+    await w.clock.advance(1000)
+    await $.turn.complete(done('ag-1', 'Done: options laid out\nSays: "Hypothesis stated."'))
+    w.setAgents([agent('ag-1', 'dojo:kurisu', 'completed'), agent('ag-2', 'dojo:jiraiya', 'failed')])
+    await w.clock.advance(300)
+    expect(w.toasts.slice(2).sort()).toEqual([`💀 Jiraiya fell — “${FALL_LINES.jiraiya}”`, '🔬 Kurisu returned — “Hypothesis stated.”'].sort())
+  })
+
+  test('a report with no Says line returns with a line from their own set', async ($, on) => {
+    const w = world(on)
+    for (const [i, c] of pair.entries()) {
+      w.setAgents([agent(`ag-${i + 1}`, `dojo:${c.key}`, 'running')])
+      await $.agent.spawn(spawnInput(`dojo:${c.key}`, undefined, 'a'))
+    }
+    w.setAgents([agent('ag-1', 'dojo:kurisu', 'completed'), agent('ag-2', 'dojo:jiraiya', 'completed')])
+    await w.clock.advance(300)
+    expect(w.toasts.slice(2).sort()).toEqual([`🐸 Jiraiya returned — “${RETURN_TOAST.jiraiya?.[0]}”`, `🔬 Kurisu returned — “${RETURN_TOAST.kurisu?.[0]}”`].sort())
+  })
+
+  test('every toast line is within the cell budget, whichever line is picked', async ($, on) => {
+    const w = world(on)
+    w.setAgents([])
+    for (const c of pair) for (let i = 0; i < 8; i++) await $.agent.spawn(spawnInput(`dojo:${c.key}`, undefined, 'a'))
+    expect(w.toasts).toHaveLength(16)
+    for (const t of w.toasts) expect(cellWidth(t), t).toBeLessThanOrEqual(60)
+    for (const key of ['kurisu', 'jiraiya']) {
+      expect(DEPLOY_MORE[key]?.length).toBeGreaterThanOrEqual(3)
+      for (const line of [...(DEPLOY_MORE[key] ?? []), ...(RETURN_TOAST[key] ?? []), ...(FALL_LINES[key] === undefined ? [] : [FALL_LINES[key]])]) {
+        expect(`${CREW[key]?.emoji} ${CREW[key]?.name} returned — “${line}”`.length, line).toBeLessThanOrEqual(60)
+      }
+    }
+  })
+
+  test('the /dojo pane lists both with role and model, and every crew member carries the roster model label', async ($, on) => {
+    world(on, { env: { DOJO_STRATEGIST: 'shikamaru' } })
+    bottomPaneFor(on)
+    const ui = await mountPaneFor($, 'dojo-roster')
+    const out = await textsIn(ui)
+    for (const c of pair) {
+      const row = out.find(l => l.includes(c.name))
+      expect(row, c.name).toBeDefined()
+      expect(row).toContain(c.emoji)
+      expect(row).toContain(c.role)
+      expect(row).toContain(c.model)
+      expect(row).toContain('idle')
+    }
+    const labels = Object.fromEntries(Object.keys(CREW).map(k => [k, modelLabel(MODELS[k] ?? '')]))
+    expect(labels).toEqual({ senku: 'haiku 5.5', sanji: 'haiku 5.5', kurisu: 'sonnet 5.5', jiraiya: 'haiku 5.5', light: 'haiku 5.5', levi: 'haiku 5.5', robin: 'haiku 5.5' })
+    expect(modelLabel(MODELS.strategist ?? '')).toBe('opus 5.5')
+    expect(out[2]).toContain('7 idle')
+    await ui.unmount()
+  })
+
+  test('the pane rows line up at every width: names, roles and models are plain ASCII beside the emoji', () => {
+    for (const columns of [100, 80, 60, 40, 30]) {
+      const text = rosterLines({ persona: 'shikamaru', voice: null, entries: {}, frame: 0, columns }).map(l => l.map(s => s.text).join(''))
+      for (const c of pair) expect(text.some(l => l.includes(c.name)), `${columns}: ${c.name}`).toBe(true)
+      for (const l of text) expect(cellWidth(l), `${columns}: ${l}`).toBeLessThanOrEqual(Math.max(columns, 30))
+    }
+  })
+
+  test('the gallery has a page for each, after Sanji and before Light, and nothing is left of the old key', async ($, on) => {
+    expect(GALLERY_ORDER.slice(3, 8)).toEqual(['senku', 'sanji', 'kurisu', 'jiraiya', 'light'])
+    expect(GALLERY_ORDER).not.toContain('l')
+    expect(Object.keys(SAYS_SAMPLES)).not.toContain('l')
+    world(on)
+    bottomPaneFor(on)
+    const ui = await mountPaneFor($, 'dojo-gallery')
+    for (let i = 0; i < 5; i++) await ui.press({ key: 'next' })
+    const k = (await textsIn(ui)).filter(l => l.trim() !== '')
+    expect(k[0]).toBe('🔬 Kurisu · architect  6/10')
+    for (const row of BANNERS.kurisu ?? []) expect(k).toContain(row)
+    expect(k.find(l => l.startsWith('Deploy'))).toContain(`“${WORDS.kurisu?.deploy}”`)
+    expect(k.find(l => l.startsWith('Colors'))).toContain(tint('kurisu', 'dark'))
+    expect(k.some(l => l.includes('.<│'))).toBe(true)
+    await ui.press({ key: 'next' })
+    const j = (await textsIn(ui)).filter(l => l.trim() !== '')
+    expect(j[0]).toBe('🐸 Jiraiya · web research  7/10')
+    for (const row of BANNERS.jiraiya ?? []) expect(j).toContain(row)
+    expect(j.find(l => l.startsWith('Fallen'))).toContain(`“${FALL_LINES.jiraiya}”`)
+    expect(j.some(l => l.includes('o<│'))).toBe(true)
+    await ui.unmount()
+  })
+
+  test('the band row of each: its glyphs, emoji and name in their color, in both palettes', () => {
+    for (const c of pair) {
+      for (const mode of ['dark', 'light'] as const) {
+        const [row] = planBand({ persona: 'shikamaru', rows: [{ key: c.key, description: 'x', elapsedMs: 5000 }], frame: 0, columns: 80, maxRows: 3, mode })
+        expect(row?.[0]?.text).toBe(`${framesOf(c.key)[0]} ${c.emoji} `)
+        expect(row?.[0]?.color).toBe(colorFor(c.key, mode))
+        expect(row?.[1]?.text.trim()).toBe(c.name)
+      }
+    }
   })
 })

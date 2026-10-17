@@ -1,4 +1,4 @@
-import { atom, read, update } from 'claude-code'
+import { atom, read } from 'claude-code'
 import type { BoxProps, EngineInterface as Engine, ElementConstructor, RenderNode, TextProps } from 'claude-code'
 
 import { isOn } from '../lib/options'
@@ -24,7 +24,6 @@ import {
   line,
   modeOf,
   paint,
-  remember,
   statsLine,
   tinyMark,
 } from './transcript-lib'
@@ -35,11 +34,11 @@ import {
 
 // The module scan reads an atom only from a const of the file that uses it; the {plugin, key} pair is the shared name.
 const strategist = atom({ plugin: 'dojo', key: 'strategist' } as const, null)
-/** tool_use_id of a call a subagent made -> its crew key, or `-` for any other subagent. The main thread has no entry. */
+/** tool_use_id of a call a subagent made -> its crew key, or `-` for any other subagent. The main thread has no entry. The state recorders write it. */
 const callers = atom({ plugin: 'dojo', key: 'callers' } as const, {} as Record<string, string>)
-/** tool_use_id of an Agent call -> the crew key it spawns, or `-` for any other agent type. */
+/** tool_use_id of an Agent call -> the crew key it spawns, or `-` for any other agent type. The state recorders write it. */
 const spawns = atom({ plugin: 'dojo', key: 'spawns' } as const, {} as Record<string, string>)
-/** The palette in force; the chrome module writes it. Dark until it says otherwise. */
+/** The palette in force; the state recorders write it. Dark until it says otherwise. */
 const paletteMode = atom({ plugin: 'dojo', key: 'paletteMode' } as const, 'dark' as PaletteMode)
 
 type UI = { Box: ElementConstructor<BoxProps>; Text: ElementConstructor<TextProps> }
@@ -252,36 +251,6 @@ export const installTranscript: Installer = (on, options) => {
   const themed = () => isOn(options, 'transcriptTheme')
   // Full crew cards with ASCII banners are opt-in: only an explicit true turns them on.
   const cardsOn = () => options.banners === true
-
-  // Remember which subagent made each tool call, so a row can be marked by the crew member behind it.
-  on('tool.call', { agentId: /./ }, async ($, e, next) => {
-    if (themed()) {
-      try {
-        const id = String(e.tool_use_id)
-        const loop = String(e.agentId)
-        const found = (await $.agent.list()).find(a => a.id === loop)
-        const key = found === undefined ? null : crewKey(found.type)
-        await update($, callers, table => remember(table, id, key ?? '-'))
-      } catch {
-        // bookkeeping only
-      }
-    }
-    return next(e)
-  })
-
-  // Remember which agent type each Agent call spawns, so its result can be drawn as that character's return.
-  on('tool.call', { tool: 'Agent' }, async ($, e, next) => {
-    if (themed()) {
-      try {
-        const type = (e as unknown as { subagent_type?: unknown }).subagent_type
-        const key = typeof type === 'string' ? crewKey(type) : null
-        await update($, spawns, table => remember(table, String(e.tool_use_id), key ?? '-'))
-      } catch {
-        // bookkeeping only
-      }
-    }
-    return next(e)
-  })
 
   // The strategist's reply keeps only its thin colored stripe.
   on('ui.render', { component: 'AssistantMessage' }, async ($, e, next) => {

@@ -67,15 +67,22 @@ export const BANNERS: Record<string, readonly string[]> = {
     ],
     ['S A N J I', '=========', 'order up'],
   ),
-  l: banner(
+  kurisu: banner(
     [
-      String.raw`     o     `,
-      String.raw`   .-^-.   `,
-      String.raw`  /_____\  `,
-      String.raw` |~~~~~~~| `,
-      String.raw` |_______| `,
+      String.raw`.-.-.-.-.-.-.-.-.`,
+      String.raw`|1|.|0|4|8|5|9|6|`,
+      String.raw`'-'-'-'-'-'-'-'-'`,
     ],
-    ['L', '=================', 'the case is closed'],
+    ['K U R I S U', '===========', 'hypothesis first'],
+  ),
+  jiraiya: banner(
+    [
+      String.raw` _(o)-(o)_ `,
+      String.raw`/ .     . \ `,
+      String.raw`|  \___/  |`,
+      String.raw` '-.___.-' `,
+    ],
+    ['J I R A I Y A', '=============', 'sources first'],
   ),
   light: banner(
     [
@@ -124,7 +131,8 @@ export const MOTIFS: Record<string, { glyph: string; rule: string; gutter: strin
   strategist: { glyph: '◆', rule: '─', gutter: '▏' },
   senku: { glyph: '⚗', rule: '·', gutter: '▏' },
   sanji: { glyph: '♨', rule: '~', gutter: '▏' },
-  l: { glyph: '◔', rule: '·', gutter: '▏' },
+  kurisu: { glyph: '∞', rule: '─', gutter: '▏' },
+  jiraiya: { glyph: '◉', rule: '·', gutter: '▏' },
   light: { glyph: '✎', rule: '─', gutter: '▏' },
   levi: { glyph: '⚔', rule: '─', gutter: '▏' },
   robin: { glyph: '❀', rule: '·', gutter: '▏' },
@@ -134,7 +142,8 @@ export const MOTIFS: Record<string, { glyph: string; rule: string; gutter: strin
 export const DEPLOY_LINES: Record<string, readonly string[]> = {
   senku: ['Ten billion percent doable.', 'Get excited!', 'Let\'s get building.'],
   sanji: ['Allow me.', 'Leave the rest to me.', 'Order up.'],
-  l: ['Hm. A suspect with two alibis.', 'Let\'s eliminate the suspects.', 'I have a lead.'],
+  kurisu: ["I'll run the numbers.", 'Hypothesis first.', "Don't call me Christina."],
+  jiraiya: ['The spy network is moving.', 'Gallant, as always.', 'Sources first.'],
   light: ['Just as planned.', 'A step ahead.', 'Naturally.'],
   levi: ['Chi. Show me the mess.', 'Tch. Let me see the damage.', 'Wipe it down.'],
   robin: ["Fufu. I'll decipher it.", 'How interesting.', 'Shall we read on?'],
@@ -144,7 +153,8 @@ export const DEPLOY_LINES: Record<string, readonly string[]> = {
 export const RETURN_LINES: Record<string, readonly string[]> = {
   senku: ['Experiment succeeded.', 'Science wins.'],
   sanji: ['Served.', 'Bon appetit.'],
-  l: ['The case is closed.', 'Interesting.'],
+  kurisu: ['The design holds.', 'Options laid out.'],
+  jiraiya: ['Intel secured.', 'Sources confirmed.'],
   light: ['Done. Cleanly.', 'Exactly as expected.'],
   levi: ['Acceptable.', 'Spotless.'],
   robin: ['The record stands.', 'The record is complete.'],
@@ -154,7 +164,8 @@ export const RETURN_LINES: Record<string, readonly string[]> = {
 export const FALLEN_LINES: Record<string, readonly string[]> = {
   senku: ['Failed experiment. That is data.'],
   sanji: ['Spoiled ingredient.'],
-  l: ['I suspected as much.'],
+  kurisu: ['The model was wrong.'],
+  jiraiya: ['The trail went cold.'],
   light: ['An unexpected variable.'],
   levi: ['Filthy.'],
   robin: ['A worn inscription.'],
@@ -167,7 +178,8 @@ export const ERROR_MARKS: Record<string, string> = {
   strategist: 'Error.',
   senku: 'Failed experiment.',
   sanji: 'Spoiled ingredient.',
-  l: 'Suspicious.',
+  kurisu: 'Falsified.',
+  jiraiya: 'Unverified.',
   light: 'An unexpected variable.',
   levi: 'Filthy.',
   robin: 'A forged inscription.',
@@ -177,7 +189,8 @@ export const ERROR_MARKS: Record<string, string> = {
 export const BUBBLES: Record<string, { borderStyle: string; tail: string }> = {
   senku: { borderStyle: 'round', tail: '<' },
   sanji: { borderStyle: 'round', tail: '~<' },
-  l: { borderStyle: 'single', tail: '.<' },
+  kurisu: { borderStyle: 'single', tail: '.<' },
+  jiraiya: { borderStyle: 'round', tail: 'o<' },
   light: { borderStyle: 'double', tail: '=<' },
   levi: { borderStyle: 'bold', tail: '-<' },
   robin: { borderStyle: 'round', tail: '*<' },

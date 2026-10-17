@@ -3,8 +3,11 @@ export type DojoBudget = { files: string[]; lookups: number }
 // Chrome (spinner, turn flair, band, toasts) state.
 export type DojoCrewRow = { id: string; key: string; description: string }
 export type DojoBand = { frame: number; rows: DojoCrewRow[] }
-/** A running crew member's start (ms on the plugin clock) and the tokens its model requests have spent so far. */
-export type DojoRun = { startedAt: number; tokens: number }
+/**
+ * A running crew member's start (ms on the plugin clock) and what its model requests have spent so far, as Claude Code
+ * counts it: its figure is `latestInput + cumOutput` (the latest response's whole prompt, cache included, plus all output).
+ */
+export type DojoRun = { startedAt: number; latestInput: number; cumOutput: number }
 export type DojoRosterEntry = { status: 'running' | 'returned' | 'fell'; count: number; task: string; says?: string }
 /** The figures the usage line draws: context fill percent, the most-used rate-limit window, session cost in US dollars. */
 export type DojoUsage = {
@@ -43,7 +46,7 @@ declare module 'claude-code' {
       band: DojoBand
       /** Latest tool call per subagent id, e.g. `Bash: npm test`. */
       tools: Record<string, string>
-      /** Per running subagent id: when it started and the tokens spent so far, for the band's right column. */
+      /** Per running subagent id: when it started and the tokens spent so far (`latestInput + cumOutput`), for the band's right column. */
       runs: Record<string, DojoRun>
       /** Crew status per character key (`levi`), for the /dojo roster pane; `count` picks the toast line in its rotation and `says` is the return toast's quote. */
       roster: Record<string, DojoRosterEntry>

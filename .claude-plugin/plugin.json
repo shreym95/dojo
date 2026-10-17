@@ -1,7 +1,7 @@
 {
   "name": "dojo",
-  "description": "Anime-themed subagents: a strategist orchestrator plus backend, frontend, research, QA and docs crew, each with its own model, tools and voice. Includes optional visuals (themed spinners, crew band, toasts, transcript theme, banners, roster pane, mission report, gallery, rank, sounds) and guards (model, commit message, delegation budgets, compaction memory).",
-  "version": "0.7.0",
+  "description": "Anime-themed subagents: a strategist orchestrator plus backend, frontend, architecture, research, QA and docs crew, each with its own model, tools and voice. Includes optional visuals (themed spinners, crew band, toasts, transcript theme, banners, roster pane, mission report, gallery, rank, sounds) and guards (model, commit message, delegation budgets, compaction memory).",
+  "version": "0.8.0",
   "author": {
     "name": "shreym95",
     "url": "https://github.com/shreym95"
@@ -71,7 +71,13 @@
     "roleGuard": {
       "type": "boolean",
       "title": "Delegation budgets",
-      "description": "In a dojo session, cap the main thread's inline edits and web lookups per turn and point it at dojo:senku, dojo:sanji, dojo:l or dojo:light.",
+      "description": "In a dojo session, cap the main thread's inline edits and web lookups per turn and point it at dojo:senku, dojo:sanji, dojo:jiraiya or dojo:light.",
+      "default": true
+    },
+    "architectGuard": {
+      "type": "boolean",
+      "title": "Architect write guard",
+      "description": "Keep dojo:kurisu's file writes out of the main working tree: Edit, Write and NotebookEdit are allowed only in the scratchpad, the system temp dir or an isolated worktree. Bash is not checked.",
       "default": true
     },
     "inlineEditFiles": {

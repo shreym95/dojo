@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="t d">
+<title id="t">The dojo crew</title>
+<desc id="d">Nine cards: two strategists and seven crew members, each with role, model, effort and a signature line.</desc>
+<defs>
+<clipPath id="k0"><rect x="32" y="33" width="365" height="138" rx="10"/></clipPath>
+<clipPath id="k1"><rect x="417" y="33" width="365" height="138" rx="10"/></clipPath>
+<clipPath id="k2"><rect x="802" y="33" width="365" height="138" rx="10"/></clipPath>
+<clipPath id="k3"><rect x="32" y="191" width="365" height="138" rx="10"/></clipPath>
+<clipPath id="k4"><rect x="417" y="191" width="365" height="138" rx="10"/></clipPath>
+<clipPath id="k5"><rect x="802" y="191" width="365" height="138" rx="10"/></clipPath>
+<clipPath id="k6"><rect x="32" y="349" width="365" height="138" rx="10"/></clipPath>
+<clipPath id="k7"><rect x="417" y="349" width="365" height="138" rx="10"/></clipPath>
+<clipPath id="k8"><rect x="802" y="349" width="365" height="138" rx="10"/></clipPath>
+</defs>
+<rect x="0.5" y="0.5" width="1199" height="519" rx="18" fill="#0d1117" stroke="#30363d"/>
+<g>
+<rect x="32.5" y="33.5" width="364" height="137" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="32" y="33" width="6" height="138" fill="#5B8C5A" clip-path="url(#k0)"/>
+<rect x="56" y="51" width="56" height="56" rx="14" fill="#5B8C5A" fill-opacity="0.16" stroke="#5B8C5A" stroke-width="1.5"/>
+<text x="84" y="89" text-anchor="middle" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="30">🦌</text>
+<text x="128" y="70" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" font-weight="700" fill="#5B8C5A">Shikamaru</text>
+<text x="128" y="89" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#e6edf3">strategist</text>
+<text x="128" y="106" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#8b949e">Opus 5.5 · medium</text>
+<line x1="56" y1="125" x2="381" y2="125" stroke="#30363d"/>
+<text x="56" y="151" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-style="italic" fill="#A3B18A">“Move made. Your turn.”</text>
+</g>
+<g>
+<rect x="417.5" y="33.5" width="364" height="137" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="417" y="33" width="6" height="138" fill="#9E62CA" clip-path="url(#k1)"/>
+<rect x="441" y="51" width="56" height="56" rx="14" fill="#9E62CA" fill-opacity="0.16" stroke="#9E62CA" stroke-width="1.5"/>
+<text x="469" y="89" text-anchor="middle" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="30">♟️</text>
+<text x="513" y="70" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" font-weight="700" fill="#9E62CA">Lelouch</text>
+<text x="513" y="89" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#e6edf3">strategist</text>
+<text x="513" y="106" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#8b949e">Opus 5.5 · medium</text>
+<line x1="441" y1="125" x2="766" y2="125" stroke="#30363d"/>
+<text x="441" y="151" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-style="italic" fill="#D4AF37">“Kneel, bugs.”</text>
+</g>
+<g>
+<rect x="802.5" y="33.5" width="364" height="137" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="802" y="33" width="6" height="138" fill="#C35B38" clip-path="url(#k2)"/>
+<rect x="826" y="51" width="56" height="56" rx="14" fill="#C35B38" fill-opacity="0.16" stroke="#C35B38" stroke-width="1.5"/>
+<text x="854" y="89" text-anchor="middle" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="30">🔬</text>
+<text x="898" y="70" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" font-weight="700" fill="#C35B38">Kurisu</text>
+<text x="898" y="89" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#e6edf3">architect</text>
+<text x="898" y="106" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#8b949e">Sonnet 5.5 · medium</text>
+<line x1="826" y1="125" x2="1151" y2="125" stroke="#30363d"/>
+<text x="826" y="151" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-style="italic" fill="#E8C4A8">“Don&#x27;t call me Christina.”</text>
+</g>
+<g>
+<rect x="32.5" y="191.5" width="364" height="137" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="32" y="191" width="6" height="138" fill="#8BC34A" clip-path="url(#k3)"/>
+<rect x="56" y="209" width="56" height="56" rx="14" fill="#8BC34A" fill-opacity="0.16" stroke="#8BC34A" stroke-width="1.5"/>
+<text x="84" y="247" text-anchor="middle" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="30">🧪</text>
+<text x="128" y="228" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" font-weight="700" fill="#8BC34A">Senku</text>
+<text x="128" y="247" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#e6edf3">backend</text>
+<text x="128" y="264" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#8b949e">Haiku 5.5 · medium</text>
+<line x1="56" y1="283" x2="381" y2="283" stroke="#30363d"/>
+<text x="56" y="309" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-style="italic" fill="#00BCD4">“Ten billion percent doable.”</text>
+</g>
+<g>
+<rect x="417.5" y="191.5" width="364" height="137" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="417" y="191" width="6" height="138" fill="#F4C430" clip-path="url(#k4)"/>
+<rect x="441" y="209" width="56" height="56" rx="14" fill="#F4C430" fill-opacity="0.16" stroke="#F4C430" stroke-width="1.5"/>
+<text x="469" y="247" text-anchor="middle" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="30">🍳</text>
+<text x="513" y="228" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" font-weight="700" fill="#F4C430">Sanji</text>
+<text x="513" y="247" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#e6edf3">frontend</text>
+<text x="513" y="264" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#8b949e">Haiku 5.5 · medium</text>
+<line x1="441" y1="283" x2="766" y2="283" stroke="#30363d"/>
+<text x="441" y="309" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-style="italic" fill="#6275AD">“The plate will be flawless.”</text>
+</g>
+<g>
+<rect x="802.5" y="191.5" width="364" height="137" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="802" y="191" width="6" height="138" fill="#2E9E7F" clip-path="url(#k5)"/>
+<rect x="826" y="209" width="56" height="56" rx="14" fill="#2E9E7F" fill-opacity="0.16" stroke="#2E9E7F" stroke-width="1.5"/>
+<text x="854" y="247" text-anchor="middle" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="30">🐸</text>
+<text x="898" y="228" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" font-weight="700" fill="#2E9E7F">Jiraiya</text>
+<text x="898" y="247" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#e6edf3">web research</text>
+<text x="898" y="264" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#8b949e">Haiku 5.5 · medium</text>
+<line x1="826" y1="283" x2="1151" y2="283" stroke="#30363d"/>
+<text x="826" y="309" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-style="italic" fill="#D8D0B8">“The spy network is moving.”</text>
+</g>
+<g>
+<rect x="32.5" y="349.5" width="364" height="137" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="32" y="349" width="6" height="138" fill="#708090" clip-path="url(#k6)"/>
+<rect x="56" y="367" width="56" height="56" rx="14" fill="#708090" fill-opacity="0.16" stroke="#708090" stroke-width="1.5"/>
+<text x="84" y="405" text-anchor="middle" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="30">🧹</text>
+<text x="128" y="386" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" font-weight="700" fill="#708090">Levi</text>
+<text x="128" y="405" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#e6edf3">QA</text>
+<text x="128" y="422" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#8b949e">Haiku 5.5 · medium</text>
+<line x1="56" y1="441" x2="381" y2="441" stroke="#30363d"/>
+<text x="56" y="467" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-style="italic" fill="#637B7B">“Tch. Let me see the damage.”</text>
+</g>
+<g>
+<rect x="417.5" y="349.5" width="364" height="137" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="417" y="349" width="6" height="138" fill="#C55959" clip-path="url(#k7)"/>
+<rect x="441" y="367" width="56" height="56" rx="14" fill="#C55959" fill-opacity="0.16" stroke="#C55959" stroke-width="1.5"/>
+<text x="469" y="405" text-anchor="middle" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="30">📓</text>
+<text x="513" y="386" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" font-weight="700" fill="#C55959">Light</text>
+<text x="513" y="405" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#e6edf3">quick fact</text>
+<text x="513" y="422" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#8b949e">Haiku 5.5 · low</text>
+<line x1="441" y1="441" x2="766" y2="441" stroke="#30363d"/>
+<text x="441" y="467" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-style="italic" fill="#9CA3AF">“Just as planned.”</text>
+</g>
+<g>
+<rect x="802.5" y="349.5" width="364" height="137" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="802" y="349" width="6" height="138" fill="#E07AA5" clip-path="url(#k8)"/>
+<rect x="826" y="367" width="56" height="56" rx="14" fill="#E07AA5" fill-opacity="0.16" stroke="#E07AA5" stroke-width="1.5"/>
+<text x="854" y="405" text-anchor="middle" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="30">🌸</text>
+<text x="898" y="386" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" font-weight="700" fill="#E07AA5">Robin</text>
+<text x="898" y="405" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#e6edf3">docs</text>
+<text x="898" y="422" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#8b949e">Haiku 5.5 · low</text>
+<line x1="826" y1="441" x2="1151" y2="441" stroke="#30363d"/>
+<text x="826" y="467" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-style="italic" fill="#817697">“Fufu. I&#x27;ll decipher it.”</text>
+</g>
+</svg>

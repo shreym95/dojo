@@ -514,12 +514,26 @@ export function addStats(table: Readonly<Record<string, DojoCrewStats>>, key: st
   }
 }
 
-/** Tokens a turn spent: input plus output; cache reads and writes are left out. Any shape is tolerated. */
-export function tokensOf(usage: unknown): number {
-  if (typeof usage !== 'object' || usage === null) return 0
+/** What an agent's token figure is made of: the prompt of its latest response and the output of all of them. */
+export type AgentTokens = { latestInput: number; cumOutput: number }
+
+/** Claude Code's own per-agent figure: the latest response's whole prompt plus every response's output. */
+export function agentTokens(state: AgentTokens): number {
+  return state.latestInput + state.cumOutput
+}
+
+/**
+ * The state after one more response: the input (cache writes and reads included) replaces the last one, the output
+ * is added to the running sum. Undefined or unreadable usage leaves the state as it was.
+ */
+export function stepTokens(prev: AgentTokens, usage: unknown): AgentTokens {
+  if (typeof usage !== 'object' || usage === null) return prev
   const u = usage as Record<string, unknown>
   const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0)
-  return n(u.input_tokens) + n(u.output_tokens)
+  return {
+    latestInput: n(u.input_tokens) + n(u.cache_creation_input_tokens) + n(u.cache_read_input_tokens),
+    cumOutput: prev.cumOutput + n(u.output_tokens),
+  }
 }
 
 // --- crew stats --------------------------------------------------------------------------------------------------

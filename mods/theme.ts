@@ -37,7 +37,8 @@ export const NEUTRAL: Theme = {
 export const CREW: Record<string, Theme> = {
   senku: { key: 'senku', name: 'Senku', role: 'backend', emoji: '🧪', color: '#8BC34A', accent: '#00BCD4', lightColor: '#59812B', lightAccent: '#008192' },
   sanji: { key: 'sanji', name: 'Sanji', role: 'frontend', emoji: '🍳', color: '#F4C430', accent: '#1E3A8A', lightColor: '#937108', lightAccent: '#1E3A8A' },
-  l: { key: 'l', name: 'L', role: 'deep research', emoji: '🍰', color: '#E0E0E0', accent: '#6B7280', lightColor: '#4D4D4D', lightAccent: '#6B7280' },
+  kurisu: { key: 'kurisu', name: 'Kurisu', role: 'architect', emoji: '🔬', color: '#C0522D', accent: '#E8C4A8', lightColor: '#A8441F', lightAccent: '#8F5A3C' },
+  jiraiya: { key: 'jiraiya', name: 'Jiraiya', role: 'web research', emoji: '🐸', color: '#2E9E7F', accent: '#D8D0B8', lightColor: '#1F7A5F', lightAccent: '#7A7058' },
   light: { key: 'light', name: 'Light', role: 'quick fact', emoji: '📓', color: '#B22222', accent: '#9CA3AF', lightColor: '#B22222', lightAccent: '#6C7586' },
   levi: { key: 'levi', name: 'Levi', role: 'QA', emoji: '🧹', color: '#708090', accent: '#2F4F4F', lightColor: '#687786', lightAccent: '#2F4F4F' },
   robin: { key: 'robin', name: 'Robin', role: 'docs', emoji: '🌸', color: '#E07AA5', accent: '#4B3B6B', lightColor: '#D13A7A', lightAccent: '#4B3B6B' },
@@ -139,10 +140,15 @@ export const WORDS: Record<string, Words> = {
     frames: ['♨', '≈', '∿', '≈'],
     deploy: 'Allow me.',
   },
-  l: {
-    verbs: ['Deducing', 'Crouching thoughtfully', 'Eliminating suspects', 'Weighing sweets', 'Closing the case'],
+  kurisu: {
+    verbs: ['Forming a hypothesis', 'Sketching the design', 'Weighing the options', 'Running a thought test', 'Reading the world line'],
+    frames: ['◜', '◝', '◞', '◟'],
+    deploy: "I'll run the numbers.",
+  },
+  jiraiya: {
+    verbs: ['Gathering intel', 'Working the network', 'Summoning a toad', 'Chasing a lead', 'Verifying the source'],
     frames: ['◔', '◑', '◕', '●'],
-    deploy: 'Hm. A suspect with two alibis.',
+    deploy: 'The spy network is moving.',
   },
   light: {
     verbs: ['Writing in the notebook', 'Calculating', 'Staying a step ahead', 'Reading the source', 'Smirking'],

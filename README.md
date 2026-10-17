@@ -1,18 +1,14 @@
 # dojo
 
-Anime-themed Claude Code subagents: one orchestrator and a crew, each with its own model, tools and voice.
+<p align="center"><img src="docs/assets/hero.svg" alt="dojo — an anime crew for Claude Code" width="100%"></p>
 
-## Crew
+<p align="center">
+<a href="https://img.shields.io/badge/version-0.8.0-9E62CA"><img src="https://img.shields.io/badge/version-0.8.0-9E62CA" alt="version 0.8.0"></a>
+<a href="https://img.shields.io/badge/Claude%20Code-plugin-9E62CA"><img src="https://img.shields.io/badge/Claude%20Code-plugin-9E62CA" alt="Claude Code plugin"></a>
+<a href="https://img.shields.io/badge/license-MIT-9E62CA"><img src="https://img.shields.io/badge/license-MIT-9E62CA" alt="license MIT"></a>
+</p>
 
-| Agent | Character | Role | Model |
-|---|---|---|---|
-| `dojo:strategist` | Shikamaru or Lelouch (per session) | Orchestrator / integrator (main thread) | claude-opus-5-5 |
-| `dojo:senku` | Senku | Backend builder | claude-sonnet-5-5 |
-| `dojo:sanji` | Sanji | Frontend builder | claude-sonnet-5-5 |
-| `dojo:l` | L | Deep web researcher | claude-haiku-4-5 |
-| `dojo:light` | Light | Quick fact-finder | claude-haiku-4-5 |
-| `dojo:levi` | Levi | QA inspector (read-only) | claude-haiku-4-5 |
-| `dojo:robin` | Robin | Documentation writer | claude-haiku-4-5 |
+An anime crew for Claude Code: a strategist, seven specialists, and a terminal that shows their personality.
 
 ## Install
 
@@ -21,90 +17,74 @@ Anime-themed Claude Code subagents: one orchestrator and a crew, each with its o
 /plugin install dojo@dojo
 ```
 
-## Launch the orchestrator
+Launch the strategist with `claude --agent dojo:strategist` or pin it in `settings.json` with `"agent": "dojo:strategist"`. Use `crew` to show the on-duty persona; pass `crew shikamaru` or `crew lelouch` to pin one. Override with `DOJO_STRATEGIST=shikamaru|lelouch` or set `DOJO_DEBUG=1` to log hook input to `${TMPDIR:-/tmp}/dojo-hook-debug.log`.
 
-```
-claude --agent dojo:strategist
-crew               # bin/crew: random persona
-crew lelouch       # pin the persona (shikamaru | lelouch)
-```
+## The crew
 
-Or make it the default in `settings.json`: `"agent": "dojo:strategist"`.
+<img src="docs/assets/crew.svg" alt="The dojo crew" width="100%">
 
-The strategist must run as the main-thread agent because subagents cannot spawn subagents. Run as a subagent it could not dispatch the crew.
+| Agent | Character | Role | Model | Effort |
+|---|---|---|---|---|
+| `dojo:strategist` | Shikamaru or Lelouch | Orchestrator / integrator (main thread) | claude-opus-5-5 | medium |
+| `dojo:senku` | Senku | Backend builder | claude-haiku-5-5 | medium |
+| `dojo:sanji` | Sanji | Frontend builder | claude-haiku-5-5 | medium |
+| `dojo:kurisu` | Kurisu | Solutions architect | claude-sonnet-5-5 | medium |
+| `dojo:jiraiya` | Jiraiya | Web researcher | claude-haiku-5-5 | medium |
+| `dojo:light` | Light | Quick fact-finder | claude-haiku-5-5 | low |
+| `dojo:levi` | Levi | QA inspector (read-only) | claude-haiku-5-5 | medium |
+| `dojo:robin` | Robin | Documentation writer | claude-haiku-5-5 | low |
 
-A SessionStart hook tells the strategist which persona is on duty. Override with `DOJO_STRATEGIST=shikamaru|lelouch`; set `DOJO_DEBUG=1` to log hook input to `${TMPDIR:-/tmp}/dojo-hook-debug.log`.
+## How work flows
 
-## Customise
+- **One fast fact**: → `dojo:light`, replies `NOT FOUND` if the answer is not at hand.
+- **Multi-source investigation**: → `dojo:jiraiya`, cited findings with confidence per claim.
+- **Options, designs, hypotheses, POCs, test methodology**: → `dojo:kurisu`, replies `NEEDS INTEL: <exact question>` for research beyond targeted lookups.
+- **Build**: → `dojo:senku` (behaviour and data) or `dojo:sanji` (presentation and interaction), reply `BLOCKED: <question>` instead of guessing.
+- **QA and verification**: → `dojo:levi`, read-only.
+- **Write or update docs**: → `dojo:robin`, from existing code or decisions already made.
+- **Make the decision**: → the strategist, using crew output as input.
 
-**Crew agents**: edit `roster.mjs` (characters, models, tools, descriptions), `personas/*.md` (voice sheets), `roles/*.md` (duties) or `shared/house-rules.md`, then:
+Senku owns behaviour and data; Sanji owns presentation and interaction. The seam is a data contract.
 
-```
-npm run build   # regenerate agents/*.md
-npm run check   # fail if agents/ has drifted (used in CI)
-npm test
-```
+## In your terminal
 
-`agents/*.md` is generated; do not edit by hand.
+<img src="docs/assets/terminal.svg" alt="dojo in the terminal" width="100%">
 
-**Visuals and art**: edit `mods/theme.ts` to change character emoji and colors; `mods/visuals/transcript-art.ts` for banners, speech bubbles and crew card lines; `mods/visuals/chrome-art.ts` for spinner verbs, turn-end words, toast lines, fall lines, rank-up text, and band rows. Validate, test and try locally:
+- **Crew moments**: one-line deploy, return, and fall lines with emoji and signature quote.
+- **Toasts**: in-character text on deploy (3s), return (5s), fall (6s), and rank-up (7s).
+- **Crew band**: one animated row per running subagent above the prompt (glyph, emoji, name, task, tool, elapsed time, live tokens).
+- **Usage line**: row above the prompt with context fill (Chakra), busiest rate-limit (Stamina, ≥50%), and cost (両).
+- **Spinners**: main thread shows strategist verbs; crew members show their own emoji and verbs.
+- **Palette mode**: light-theme colors on white, dark colors lifted to 4.5:1 on black across spinners, band, transcript, chrome.
+- **Transcript theme**: persona frame on strategist replies; crew cards in character colors on tool calls, results, errors.
+- **Crew cards**: opt-in with `banners` toggle (off by default); ASCII banners on deploy/return/fall.
+- **Prompt chrome**: session mode tagged with strategist emoji and name.
+- **Roster pane** (`/dojo`): the crew, who is on duty and running, per-crew session stats, rank.
+- **Mission report** (`/dojo-recap`): crew deployed, runs, time, tokens, last quote, who fell, final context and cost, rank, strategist sign-off.
+- **Gallery** (`/dojo-gallery`): preview each character's banner, colors, animation frames, spinner verbs, signature lines, speech bubble.
+- **Rank across sessions**: grows with every dojo crew member that returns. Shikamaru/neutral: Genin / Chūnin / Jōnin / Kage; Lelouch: Pawn / Knight / Rook / King. Thresholds: 0 / 25 / 100 / 300 points.
 
-```
-claude plugin validate .   # check the hook structure
-claude plugin test .       # run the mod suite
-claude --plugin-dir .      # try the plugin locally without installing
-```
+## Guards
 
-## Voice levels
-
-How loud the characters are is set in `roster.mjs`: `defaults: { voice: 'medium' }`, or `voice: '...'` on one agent to override it.
-
-| Level | What you get |
-|---|---|
-| `subtle` | One in-character opening line, optional sign-off, plain body. |
-| `medium` (default) | 1-2 opening lines, character-coloured wording, up to ~3 short asides and 2 catchphrases, a closing line. About +20% length. |
-| `full` | The character speaks freely, section by section. About +40% length. |
-
-At every level facts, paths, numbers and commands stay exact, and persona never reaches code, commits or files. Each crew report ends with a `Says:` line; the strategist relays them to you under `Crew:`. Level rules are in `shared/voice/`; run `npm run build` after changing a level.
-
-## Visuals
-
-Built on Claude Code's function hooks (early-access API), the dojo plugin includes:
-
-- **Themed spinners**: the main thread's spinner word comes from the on-duty strategist (Shikamaru: "Shadow-possessing", "Reading the board"; Lelouch: "Commanding", "Geass-ing"). A crew member's own spinner gets its emoji and verbs (🧪 Senku "Science-ing", 🧹 Levi "Scrubbing", 🌸 Robin "Deciphering"...). Verbs rotate per turn.
-- **Turn-end flair**: the line that closes a turn says "Outmaneuvered" (Shikamaru) or "Checkmated" (Lelouch).
-- **Crew band**: while any `dojo:*` subagent runs, one row each above the prompt showing the animated glyph, emoji, name, task, short tool name, and right-aligned elapsed time and live tokens (input+output, cache excluded). Gone when nobody is running. The row shrinks on narrow terminals. Claude Code's own agent list below the prompt is drawn by the engine and cannot be hidden or restyled by a plugin, so it still shows alongside the band.
-- **Session usage line**: one row above the prompt that shows where the session is heading. The bar shape follows the strategist: Shikamaru shows `≋∙` (density wave), Lelouch `♞⋅` (knight), neutral `▰▱` (block). Example: `🦌 Chakra ≋≋≋≋≋≋∙∙∙∙ 58% · Stamina 23% (5h) · 両 $1.42`. Chakra is the context window's fill, Stamina the busiest rate-limit window (shown only at ≥50%; subscriptions only), and the last figure the session cost. The bar color turns to warning from 60% and error from 85%, where a short line from the strategist is added. A segment with no data is left out; under 50 columns the row shrinks to `🦌 ≋≋≋∙ 58% · 23%`.
-- **Palette mode**: light-theme colors meet ≥4.5:1 contrast on white; dark colors are lifted to ≥4.5:1 on black and applied across spinners, crew band, transcript, and all chrome.
-- **Transcript theme**: persona frame (a 1-cell colored stripe) on the strategist's reply, and crew cards (or one-line moments) in the on-duty character's colors on crew-member tool calls, results and errors. Tool badges show the crew emoji.
-- **Crew cards**: opt-in via the `banners` toggle (off by default). Full cards with ASCII banners shown when deployed, returned or fallen, replacing the one-line deploy/return/fall moments.
-- **Prompt chrome**: the session mode line tagged with the on-duty strategist's emoji and name in its color.
-- **Roster pane**: `/dojo` shows the crew, who is on duty and who is running, with per-crew session stats (runs, time, tokens, most-deployed badge at ≥2 runs) and rank line.
-- **Mission report**: `/dojo-recap` shows crew deployed, runs, time, tokens, last `Says:` line, who fell, final context and cost, rank, and the strategist's sign-off. Command only.
-- **Gallery**: `/dojo-gallery` previews each character's banner, colors (dark/light variants), animation frames, spinner verbs, signature lines, and sample speech bubble. Navigate with `p`/`n`, close with `q` or Esc.
-- **Rank across sessions**: a rank that grows with every dojo crew member that returns. Shikamaru/neutral use Genin / Chūnin / Jōnin / Kage; Lelouch uses Pawn / Knight / Rook / King. Thresholds: 0 / 25 / 100 / 300 points. Stored in Claude Code's plugin store; falls back to "(this session)" if unavailable. Toast on rank-up.
-- **Deploy/return/fall toasts and sounds**: text-only toasts appear when a dojo subagent is deployed (3s), returns (5s) or falls (6s), and when the crew rank goes up (7s). Sound cues play on macOS only (via `afplay`).
-
-Toggle features in `/config` (or `pluginConfigs` in settings): `spinners`, `turnFlair`, `band`, `usageLine`, `toasts`, `neutralMainTheme`, `transcriptTheme`, `banners`, `promptChrome`, `rosterPane`, `sounds`, `paletteMode`, `rank`, all on by default except `paletteMode` which is `auto`.
-
-## Guards and gates
-
-- **Model guard** (always on): an `agent.spawn` of any `dojo:*` type has `model` stripped, so a caller's "always pass model: sonnet" can't override an agent's own frontmatter model.
-- **Commit gate** (on by default): forces Conventional Commits (subject ≤72 chars, no body), denies a `git commit` command that breaks the rules, and injects the configured Co-Authored-By trailer (default `Co-Authored-By: Claude`). Empty trailer disables the check.
-- **Delegation budgets** (on by default, in a dojo session): caps the main thread's inline edits and lookups per turn. Limits: 2 files, 6 lines, 3 lookups. Scratch (temp dirs, `/scratchpad/`) is exempt.
-- **Compaction memory** (on by default): in a dojo session, the compaction summary keeps the on-duty line, voice level, running dojo agents with their tasks, and user decisions.
+- **Commit gate** (on by default): forces Conventional Commits (subject ≤72 chars, no body), denies commits that break the rules, injects the configured Co-Authored-By trailer (default `Co-Authored-By: Claude`).
+- **Delegation budgets** (on by default): caps the main thread's inline edits (2 files, 6 lines) and lookups (3 per turn); points to dojo:senku, dojo:sanji, dojo:jiraiya or dojo:light.
+- **Architect write guard** (on by default): keeps dojo:kurisu's file writes to the scratchpad, system temp dir or an isolated worktree; Bash is not checked.
+- **Compaction memory** (on by default): keeps the on-duty line, voice level, running dojo agents with their tasks, and user decisions in summaries.
+- **Model guard** (always on): strips `model` from any `dojo:*` agent spawn so the agent's own frontmatter model always wins.
 
 ## Commands
 
-- `/dojo-duty [shikamaru|lelouch]`: Show or switch the strategist persona on duty. The choice survives compaction and resume in the same process; a resume in a new process starts from the persona picked at session start.
-- `/dojo-voice [subtle|medium|full|default|reset|off]`: Show or set the dojo voice level override for this session; overrides pass to agents spawned until cleared.
-- `/dojo`: Open the roster pane (requires `rosterPane` toggle on).
-- `/dojo-recap`: Open the mission report: who was deployed, what fell, final context and cost, rank (requires `rosterPane` toggle on).
-- `/dojo-gallery`: Browse the dojo characters: banner, colors, spinner words and lines (requires `rosterPane` toggle on).
+| Command | What it does |
+|---|---|
+| `/dojo-duty [shikamaru\|lelouch]` | Show or switch the strategist persona on duty. |
+| `/dojo-voice [subtle\|medium\|full\|default\|reset\|off]` | Show or set the dojo voice level for this session. |
+| `/dojo` | Open the roster pane (requires `rosterPane` toggle on). |
+| `/dojo-recap` | Open the mission report (requires `rosterPane` toggle on). |
+| `/dojo-gallery` | Browse each character's banner, colors, spinner verbs, signature lines. |
 
 ## Settings
 
-Every setting below lives in the `userConfig` section of the plugin and can be toggled in `/config` or set in `pluginConfigs` in Claude Code's `settings.json`:
+<details><summary>All settings (/config)</summary>
 
 | Key | Default | What it does |
 |---|---|---|
@@ -116,7 +96,8 @@ Every setting below lives in the `userConfig` section of the plugin and can be t
 | `neutralMainTheme` | true | When no strategist persona is detected, still theme the main spinner with a neutral strategist pool. |
 | `commitGate` | true | Force the configured commit trailer into git texts and deny git commit commands whose inline message breaks the commit rules (Conventional Commits subject, no body, exact trailer). Applies in every session. |
 | `commitTrailer` | `Co-Authored-By: Claude` | The exact Co-Authored-By line commits must carry. Empty keeps Claude Code's own text and skips the trailer check. |
-| `roleGuard` | true | In a dojo session, cap the main thread's inline edits and web lookups per turn and point it at dojo:senku, dojo:sanji, dojo:l or dojo:light. |
+| `roleGuard` | true | In a dojo session, cap the main thread's inline edits and web lookups per turn and point it at dojo:senku, dojo:sanji, dojo:jiraiya or dojo:light. |
+| `architectGuard` | true | Keep dojo:kurisu's file writes out of the main working tree: Edit, Write and NotebookEdit are allowed only in the scratchpad, the system temp dir or an isolated worktree. Bash is not checked. |
 | `inlineEditFiles` | 2 | Distinct files the main thread may edit itself in one turn before it must delegate. |
 | `inlineEditLines` | 6 | Largest Edit (lines in new_string) the main thread may make itself. |
 | `inlineLookups` | 3 | WebSearch and WebFetch calls the main thread may make itself in one turn before it must delegate. |
@@ -129,9 +110,40 @@ Every setting below lives in the `userConfig` section of the plugin and can be t
 | `paletteMode` | `auto` | Colors of the dojo chrome and transcript. `auto` follows the Claude Code theme (light when its name contains "light"); `dark` and `light` force one. Light-theme colors meet ≥4.5:1 on white; dark colors are lifted to ≥4.5:1 on black. |
 | `rank` | true | Keep a rank that grows with every dojo crew member that returns, across sessions. Shown in `/dojo` and `/dojo-recap`, with a toast on rank-up. Ladder: Shikamaru/neutral (Genin / Chūnin / Jōnin / Kage), Lelouch (Pawn / Knight / Rook / King); thresholds 0 / 25 / 100 / 300 points. |
 
-## Note
+</details>
 
-Don't pass `model` when spawning dojo agents: the model guard enforces each agent's own frontmatter model.
+## Customise
+
+Edit `roster.mjs` (characters, models, tools), `personas/*.md` (voice sheets), `roles/*.md` (duties) or `shared/house-rules.md`, then:
+
+```
+npm run build   # regenerate agents/*.md
+npm run check   # fail if agents/ has drifted (used in CI)
+npm test
+```
+
+`agents/*.md` is generated; do not edit by hand.
+
+Visuals and art: edit `mods/theme.ts` for character emoji and colors; `mods/visuals/transcript-art.ts` for banners and speech bubbles; `mods/visuals/chrome-art.ts` for spinners, turn-end words, toasts, and band rows.
+
+## Develop
+
+Validate, test and try the plugin locally:
+
+```
+claude plugin validate .   # check the hook structure
+claude plugin test .       # run the mod suite
+claude --plugin-dir .      # try the plugin locally without installing
+```
+
+Persona sheets live in `personas/`; roles in `roles/`; character art in `mods/visuals/`.
+
+## Notes
+
+- **Sound cues**: macOS only (via `afplay`).
+- **Claude Code's agent list**: cannot be hidden or restyled by a plugin; the crew band draws alongside it.
+- **mods API**: early access; breaking changes may occur.
+- **Model guard**: never pass `model` to dojo agents; the model guard enforces each agent's own frontmatter model.
 
 ## License
 

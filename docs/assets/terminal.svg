@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="t d">
+<title id="t">dojo in the terminal</title>
+<desc id="d">A mock terminal showing a Levi deploy line, a toast, a return line, a spinner, two crew band rows and the usage line.</desc>
+<rect x="0.5" y="0.5" width="1199" height="419" rx="18" fill="#0d1117" stroke="#30363d"/>
+<rect x="24" y="22" width="1152" height="376" rx="12" fill="#010409" stroke="#30363d"/>
+<path d="M24 62V34a12 12 0 0 1 12-12h1128a12 12 0 0 1 12 12v28z" fill="#161b22"/>
+<line x1="24" y1="62.5" x2="1176" y2="62.5" stroke="#30363d"/>
+<circle cx="52" cy="42" r="6.5" fill="#ff5f56"/><circle cx="74" cy="42" r="6.5" fill="#ffbd2e"/><circle cx="96" cy="42" r="6.5" fill="#27c93f"/>
+<text x="600" y="47" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#8b949e">claude · dojo:strategist</text>
+<text x="64" y="100" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="20" fill="#708090" xml:space="preserve">🧹</text>
+<text x="88" y="100" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#708090" xml:space="preserve"> </text>
+<text x="100" y="100" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#708090" font-weight="700" xml:space="preserve">Levi</text>
+<text x="148" y="100" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#708090" xml:space="preserve"> ▸ </text>
+<text x="184" y="100" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#e6edf3" xml:space="preserve">QA the cart flow</text>
+<text x="376" y="100" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#e6edf3" xml:space="preserve">  </text>
+<text x="400" y="100" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#c9d1d9" font-style="italic" xml:space="preserve">“Tch. Let me see the damage.”</text>
+<rect x="50" y="120" width="556" height="38" rx="9" fill="#708090" fill-opacity="0.12" stroke="#708090" stroke-opacity="0.7"/>
+<text x="64" y="146" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="20" fill="#708090" xml:space="preserve">🧹</text>
+<text x="88" y="146" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#708090" xml:space="preserve"> </text>
+<text x="100" y="146" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#708090" font-weight="700" xml:space="preserve">Levi deployed</text>
+<text x="256" y="146" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#8b949e" xml:space="preserve"> — </text>
+<text x="292" y="146" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#e6edf3" font-style="italic" xml:space="preserve">“Chi. Show me the mess.”</text>
+<text x="64" y="196" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="20" fill="#708090" xml:space="preserve">🧹</text>
+<text x="88" y="196" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#708090" xml:space="preserve"> </text>
+<text x="100" y="196" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#708090" font-weight="700" xml:space="preserve">Levi</text>
+<text x="148" y="196" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#708090" xml:space="preserve"> ✓ 2m 55s  </text>
+<text x="280" y="196" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#c9d1d9" font-style="italic" xml:space="preserve">“Acceptable.”</text>
+<line x1="50" y1="222" x2="1136" y2="222" stroke="#30363d" stroke-dasharray="2 5"/>
+<text x="64" y="254" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="20" fill="#5B8C5A" xml:space="preserve">🦌</text>
+<text x="88" y="254" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#5B8C5A" xml:space="preserve"> Reading the board… </text>
+<text x="328" y="254" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#5B8C5A" font-weight="700" xml:space="preserve">◒</text>
+<text x="64" y="296" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#8BC34A" xml:space="preserve">◐</text>
+<text x="76" y="296" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#8BC34A" xml:space="preserve"> </text>
+<text x="88" y="296" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="20" fill="#8BC34A" xml:space="preserve">🧪</text>
+<text x="112" y="296" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#8BC34A" xml:space="preserve"> </text>
+<text x="124" y="296" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#8BC34A" font-weight="700" xml:space="preserve">Senku</text>
+<text x="220" y="296" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#c9d1d9" xml:space="preserve">Export API · Bash</text>
+<text x="856" y="296" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#8b949e" xml:space="preserve">2m 37s · ↓ 58.5k</text>
+<text x="64" y="330" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#708090" xml:space="preserve">⟋</text>
+<text x="76" y="330" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#708090" xml:space="preserve"> </text>
+<text x="88" y="330" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="20" fill="#708090" xml:space="preserve">🧹</text>
+<text x="112" y="330" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#708090" xml:space="preserve"> </text>
+<text x="124" y="330" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#708090" font-weight="700" xml:space="preserve">Levi</text>
+<text x="220" y="330" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#c9d1d9" xml:space="preserve">QA the cart flow · Read</text>
+<text x="856" y="330" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#8b949e" xml:space="preserve">42s · ↓ 14.2k</text>
+<text x="64" y="376" font-family="'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" font-size="20" fill="#5B8C5A" xml:space="preserve">🦌</text>
+<text x="88" y="376" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#8b949e" xml:space="preserve"> Chakra </text>
+<text x="184" y="376" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#5B8C5A" xml:space="preserve">≋≋≋≋≋≋</text>
+<text x="256" y="376" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#8b949e" xml:space="preserve">∙∙∙∙</text>
+<text x="304" y="376" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#e6edf3" xml:space="preserve"> 58%</text>
+<text x="352" y="376" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#8b949e" xml:space="preserve"> · Stamina 63% (5h) · 両 </text>
+<text x="652" y="376" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" fill="#e6edf3" xml:space="preserve">$1.42</text>
+</svg>

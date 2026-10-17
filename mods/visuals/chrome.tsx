@@ -4,20 +4,20 @@ import type { ElementConstructor, EngineInterface as Engine, RenderElement, Text
 import { isOn } from '../lib/options'
 import type { Installer, Options } from '../lib/options'
 import { crewKey, strategistKey } from '../lib/persona'
-import { summarizeTool } from '../lib/text'
-import { CREW, NEUTRAL, STRATEGISTS, WORDS, resolveMode } from '../theme'
+import { CREW, NEUTRAL, STRATEGISTS, WORDS } from '../theme'
 import type { PaletteMode, Theme, Words } from '../theme'
 import type { DojoBand, DojoCrewRow, DojoCrewStats, DojoRank, DojoRosterEntry, DojoRun, DojoUsage } from '../state'
+import { NO_TOKENS, pointsOf } from '../state/recorders'
 import { CUE_GAP_MS, GALLERY_ORDER, RANK_STORE_KEY, SOUNDS, TOAST_MS } from './chrome-art'
 import type { Cue } from './chrome-art'
 import {
   addStats,
+  agentTokens,
   deployToast,
   fallToast,
   framesOf,
   galleryLines,
   galleryText,
-  parseSays,
   planBand,
   planModes,
   planUsage,
@@ -29,7 +29,6 @@ import {
   rosterLines,
   rosterText,
   snapshotUsage,
-  tokensOf,
   turnWord,
   verbAt,
 } from './chrome-lib'
@@ -52,7 +51,7 @@ const usage = atom({ plugin: 'dojo', key: 'usage' } as const, null as DojoUsage 
 const stats = atom({ plugin: 'dojo', key: 'stats' } as const, {} as Record<string, DojoCrewStats>)
 const rank = atom({ plugin: 'dojo', key: 'rank' } as const, null as DojoRank | null)
 const gallery = atom({ plugin: 'dojo', key: 'gallery' } as const, 0)
-// written here (session start, theme or setting change), read by the transcript module too
+// written by the state recorders (session start, theme or setting change), read here and by the transcript module
 const paletteMode = atom({ plugin: 'dojo', key: 'paletteMode' } as const, 'dark' as PaletteMode)
 
 const TICK_MS = 250
@@ -201,7 +200,7 @@ async function trackRuns($: Engine, ids: readonly string[]) {
   const now = await $.clock.now()
   await update($, runs, r => {
     const next: Record<string, DojoRun> = {}
-    for (const id of ids) next[id] = r[id] ?? { startedAt: now, tokens: 0 }
+    for (const id of ids) next[id] = r[id] ?? { startedAt: now, ...NO_TOKENS }
     return next
   })
 }
@@ -269,31 +268,6 @@ async function tick($: Engine, options: Options) {
   await update($, band, b =>
     rows.length === 0 && b.rows.length === 0 ? b : { frame: rows.length === 0 ? 0 : b.frame + 1, rows },
   )
-}
-
-/** The palette for the engine theme and the `paletteMode` setting; `changed` is a row being written right now. */
-async function syncMode($: Engine, options: Options, changed?: { key: string; value: unknown }) {
-  let theme: unknown
-  let setting: unknown = options.paletteMode
-  try {
-    const rows = await $.config.list()
-    theme = rows.find(r => r.key === 'theme')?.value
-    const mine = rows.find(r => r.key === 'dojo.paletteMode')
-    if (mine !== undefined) setting = mine.value
-  } catch {
-    // no config rows to read: the option and the dark default stand
-  }
-  if (changed !== undefined) {
-    if (changed.key === 'theme') theme = changed.value
-    else setting = changed.value
-  }
-  const next = resolveMode(setting, theme)
-  await update($, paletteMode, () => next)
-}
-
-const pointsOf = (stored: unknown): number => {
-  const p = typeof stored === 'object' && stored !== null ? (stored as { points?: unknown }).points : undefined
-  return typeof p === 'number' && Number.isFinite(p) && p > 0 ? Math.floor(p) : 0
 }
 
 /** The rank points: held in state once loaded from the plugin store. Writes state, so never call it while drawing. */
@@ -408,7 +382,7 @@ async function openPane($: Engine, spec: { id: string; title: string; rows: numb
 }
 
 export const installChrome: Installer = (on, options) => {
-  // Deploy toast, sound and band row for a dojo subagent that started.
+  // Deploy toast and sound for a dojo subagent that started, and a tick to watch it. The state recorders have written the roster by now.
   on('agent.spawn', { subagentType: /^dojo:(?!strategist$)/ }, async ($, e, next) => {
     const ran = await next(e)
     const key = crewKey(e.subagentType)
@@ -417,30 +391,10 @@ export const installChrome: Installer = (on, options) => {
         seen.set(ran.agentId, 'running')
         const c = CREW[key]
         let nth = 1
-        if (isOn(options, 'rosterPane') || isOn(options, 'toasts')) {
-          const table = await update($, roster, r => ({
-            ...r,
-            [key]: { status: 'running' as const, count: (r[key]?.count ?? 0) + 1, task: e.description },
-          }))
-          nth = table[key]?.count ?? 1
-        }
-        if (isOn(options, 'rosterPane')) await update($, stats, s => addStats(s, key, { runs: 1 }))
+        if (isOn(options, 'rosterPane') || isOn(options, 'toasts')) nth = (await read($, roster))[key]?.count ?? 1
         if (c !== undefined && isOn(options, 'toasts')) $.ui.toast(deployToast(key, nth), { timeoutMs: TOAST_MS.deploy })
         await cue($, options, 'deploy')
         ensureTick($, options)
-        if (isOn(options, 'band')) {
-          const id = ran.agentId
-          try {
-            const startedAt = await $.clock.now()
-            await update($, runs, r => ({ ...r, [id]: { startedAt, tokens: 0 } }))
-          } catch {
-            // no start time: the row shows no elapsed figure until the tick notes one
-          }
-          await update($, band, b => ({
-            ...b,
-            rows: [...b.rows.filter(r => r.id !== id), { id, key, description: e.description }],
-          }))
-        }
       } catch {
         // chrome only: the subagent has started either way
       }
@@ -448,75 +402,10 @@ export const installChrome: Installer = (on, options) => {
     return ran
   })
 
-  // What a crew member said last: the `Says:` line of its report.
-  on('turn.complete', { reason: 'answer' }, async ($, e, next) => {
-    const ran = await next(e)
-    if (e.agentId !== undefined && isOn(options, 'band')) {
-      try {
-        const id = e.agentId
-        const total = tokensOf(e.usage)
-        if (total > 0) {
-          await update($, runs, r => {
-            const cur = r[id]
-            return cur === undefined || cur.tokens >= total ? r : { ...r, [id]: { ...cur, tokens: total } }
-          })
-        }
-      } catch {
-        // the token figure is a garnish
-      }
-    }
-    if (e.agentId !== undefined && (isOn(options, 'rosterPane') || isOn(options, 'toasts'))) {
-      try {
-        const says = parseSays(e.answer)
-        const id = e.agentId
-        const agent = (await $.agent.list()).find(a => a.id === id)
-        const key = agent === undefined ? null : crewKey(agent.type)
-        if (key !== null && CREW[key] !== undefined && isOn(options, 'rosterPane')) {
-          const ms = Number.isFinite(e.durationMs) && e.durationMs > 0 ? e.durationMs : 0
-          const tokens = tokensOf(e.usage)
-          if (ms > 0 || tokens > 0 || says !== undefined) await update($, stats, s => addStats(s, key, { ms, tokens, ...(says === undefined ? {} : { says }) }))
-        }
-        if (says !== undefined && key !== null) {
-          await update($, roster, r => ({
-            ...r,
-            [key]: { status: 'running' as const, count: 1, task: '', ...r[key], says },
-          }))
-        }
-      } catch {
-        // the line is a garnish
-      }
-    }
-    return ran
-  })
-
-  on('tool.call', async ($, e, next) => {
-    if (e.agentId !== undefined && isOn(options, 'band')) {
-      const id = e.agentId
-      const line = summarizeTool(String(e.tool), e as unknown as Record<string, unknown>)
-      await update($, tools, t => ({ ...t, [id]: line }))
-      ensureTick($, options)
-    }
+  // A subagent at work keeps the tick running; the tool it called is recorded by the state recorders.
+  on('tool.call', { agentId: /./ }, async ($, e, next) => {
+    if (e.agentId !== undefined && isOn(options, 'band')) ensureTick($, options)
     return next(e)
-  })
-
-  // What a crew member has spent so far: each of its model requests adds its tokens to the run. The main loop passes.
-  on('turn.step', async function* ($, e, next) {
-    const out = yield* next(e)
-    if (e.agentId !== undefined && isOn(options, 'band')) {
-      try {
-        const id = e.agentId
-        const spent = tokensOf(out.usage)
-        if (spent > 0) {
-          await update($, runs, r => {
-            const cur = r[id]
-            return cur === undefined ? r : { ...r, [id]: { ...cur, tokens: cur.tokens + spent } }
-          })
-        }
-      } catch {
-        // the token figure is a garnish
-      }
-    }
-    return out
   })
 
   on('ui.render', { component: 'Spinner' }, async ($, e, next) => {
@@ -577,21 +466,7 @@ export const installChrome: Installer = (on, options) => {
     return word === undefined ? next(e) : next({ ...e, props: { ...e.props, word } })
   })
 
-  // The latest session figures for the usage line; the engine pushes them, the band hook below draws them.
-  on('session.measure', async ($, e, next) => {
-    const ran = await next(e)
-    if (isOn(options, 'usageLine')) {
-      try {
-        const figures = snapshotUsage(e)
-        await update($, usage, () => figures)
-      } catch {
-        // the usage line is a garnish
-      }
-    }
-    return ran
-  })
-
-  // One usage row first (when on and known), then the crew band below it.
+  // The crew band rows first, so they sit under the engine's own agent line, then one usage row last (when on and known; the state recorders keep its figures), just above the prompt.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const wantBand = isOn(options, 'band')
     const wantUsage = isOn(options, 'usageLine')
@@ -612,7 +487,7 @@ export const installChrome: Installer = (on, options) => {
           usageRow = undefined
         }
       }
-      let lines: Line[] = usageRow === undefined ? [] : [usageRow]
+      let lines: Line[] = []
       if (bandState !== undefined && crewOut) {
         const latest = await read($, tools)
         const held = await read($, runs)
@@ -623,7 +498,6 @@ export const installChrome: Installer = (on, options) => {
           now = undefined
         }
         lines = [
-          ...lines,
           ...planBand({
             persona,
             rows: bandState.rows.map(r => {
@@ -633,16 +507,17 @@ export const installChrome: Installer = (on, options) => {
                 description: r.description,
                 tool: latest[r.id],
                 ...(run === undefined || now === undefined ? {} : { elapsedMs: Math.max(0, now - run.startedAt) }),
-                ...(run === undefined || run.tokens <= 0 ? {} : { tokens: run.tokens }),
+                ...(run === undefined || agentTokens(run) <= 0 ? {} : { tokens: agentTokens(run) }),
               }
             }),
             frame: bandState.frame,
             columns,
-            maxRows: e.props.maxRows - lines.length,
+            maxRows: e.props.maxRows - (usageRow === undefined ? 0 : 1),
             mode,
           }),
         ]
       }
+      if (usageRow !== undefined) lines = [...lines, usageRow]
       if (lines.length > 0) {
         const { Box, Text } = $.ui.resolve(e)
         tree = <Box flexDirection="column">{lines.map((l, i) => drawLine(Text, l, `band-${i}`))}</Box>
@@ -677,26 +552,7 @@ export const installChrome: Installer = (on, options) => {
         }
       }
     }
-    try {
-      await syncMode($, options)
-      if (isOn(options, 'rank')) await loadRank($)
-    } catch {
-      // the dark palette and a rank loaded on first use stand
-    }
     return next(e)
-  })
-
-  // The palette follows the engine theme (and the setting): re-resolved when either is written.
-  on('config.set', { key: ['theme', 'dojo.paletteMode'] }, async ($, e, next) => {
-    const ran = await next(e)
-    if (ran.deny === undefined) {
-      try {
-        await syncMode($, options, { key: e.key, value: e.value })
-      } catch {
-        // the palette stays as it was
-      }
-    }
-    return ran
   })
 
   on('command.run', { command: 'dojo' }, async ($, e, next) => {

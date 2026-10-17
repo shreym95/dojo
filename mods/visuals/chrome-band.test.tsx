@@ -29,7 +29,8 @@ const SANJI: BandRow = {
   tokens: 58_500,
 }
 const LEVI: BandRow = { key: 'levi', description: 'Review the whole chrome and transcript diff for regressions and a11y gaps', tool: 'Read: /a/b.ts', elapsedMs: 42_000, tokens: 3100 }
-const L: BandRow = { key: 'l', description: 'Research', elapsedMs: 3_900_000 }
+const JIRAIYA: BandRow = { key: 'jiraiya', description: 'Research', elapsedMs: 3_900_000 }
+const KURISU: BandRow = { key: 'kurisu', description: 'Design options', tool: 'Read: /a/design.md', elapsedMs: 75_000, tokens: 9_400 }
 
 /** The crew rows of a plan. */
 const rowsOf = (rows: readonly BandRow[], columns: number, mode: 'dark' | 'light' = 'dark', frame = 0) =>
@@ -41,13 +42,13 @@ describe('band rows: format', () => {
     expect(row).toBeDefined()
     const segs = row as Line
     expect(segs[0]).toEqual({ text: '♨ 🍳 ', color: colorFor('sanji', 'dark') })
-    expect(segs[1]).toEqual({ text: 'Sanji', color: colorFor('sanji', 'dark'), bold: true })
+    expect(segs[1]).toEqual({ text: 'Sanji  ', color: colorFor('sanji', 'dark'), bold: true })
     expect(segs.find(s => s.text === 'Light palette + transcript side')?.color).toBeUndefined()
     expect(segs.find(s => s.text === ' · Bash')?.dim).toBe(true)
     const last = segs[segs.length - 1]
     expect(last?.dim).toBe(true)
     expect(last?.text.trim()).toBe('2m 37s · ↓ 58.5k')
-    expect(text(segs).startsWith('♨ 🍳 Sanji  Light palette + transcript side · Bash')).toBe(true)
+    expect(text(segs).startsWith('♨ 🍳 Sanji    Light palette + transcript side · Bash')).toBe(true)
     expect(text(segs).endsWith('2m 37s · ↓ 58.5k')).toBe(true)
   })
 
@@ -69,12 +70,12 @@ describe('band rows: format', () => {
 
   test('the right column ends on one cell for every row, and the names line up', () => {
     for (const columns of [120, 80, 60, 52]) {
-      const rows = rowsOf([SANJI, LEVI, L], columns)
+      const rows = rowsOf([SANJI, LEVI, JIRAIYA], columns)
       const widths = rows.map(r => cellWidth(text(r)))
       expect(new Set(widths).size, `${columns} cols`).toBe(1)
       expect(widths[0]).toBe(columns - 1)
       // the task starts in the same column on every row: glyph, emoji, name column, gap
-      for (const r of rows) expect(cellWidth((r[0]?.text ?? '') + (r[1]?.text ?? '') + (r[2]?.text ?? ''))).toBe(12)
+      for (const r of rows) expect(cellWidth((r[0]?.text ?? '') + (r[1]?.text ?? '') + (r[2]?.text ?? ''))).toBe(14)
     }
   })
 
@@ -106,7 +107,7 @@ describe('band rows: format', () => {
     // no elapsed figure known: the tokens stand alone; neither: no right column at all
     expect(text(rowsOf([{ key: 'levi', description: 'qa', tokens: 3100 }], 100)[0] as Line).endsWith('↓ 3.1k')).toBe(true)
     const bare = text(rowsOf([{ key: 'levi', description: 'qa' }], 100)[0] as Line)
-    expect(bare).toBe('⚔ 🧹 Levi   qa')
+    expect(bare).toBe('⚔ 🧹 Levi     qa')
   })
 })
 
@@ -128,8 +129,8 @@ describe('band rows: width', () => {
     expect(cut).toContain(' · Read')
     expect(cut.endsWith('2m 37s · ↓ 58.5k')).toBe(true)
 
-    // 52: not enough left for a useful task beside the tool: the tool drops, the tokens stay
-    const noTool = at(52)
+    // 54: not enough left for a useful task beside the tool: the tool drops, the tokens stay
+    const noTool = at(54)
     expect(noTool).toContain('…')
     expect(noTool).not.toContain('Read')
     expect(noTool.endsWith('2m 37s · ↓ 58.5k')).toBe(true)
@@ -143,7 +144,7 @@ describe('band rows: width', () => {
     expect(noTokens).toContain('…')
 
     // under 50: identity and elapsed only
-    expect(at(49)).toBe('⚔ 🧹 Levi   2m 37s')
+    expect(at(49)).toBe('⚔ 🧹 Levi     2m 37s')
   })
 
   test('the tool name stays when the whole task and the tool fit', () => {
@@ -153,10 +154,10 @@ describe('band rows: width', () => {
   })
 
   test('narrow form: glyph, emoji, name, two spaces, elapsed; the elapsed figures line up', () => {
-    const lines = rowsOf([SANJI, LEVI, L], 45)
-    expect(lines.map(text)).toEqual(['♨ 🍳 Sanji  2m 37s', '⚔ 🧹 Levi   42s', '◔ 🍰 L      1h 05m'])
+    const lines = rowsOf([SANJI, LEVI, JIRAIYA], 45)
+    expect(lines.map(text)).toEqual(['♨ 🍳 Sanji    2m 37s', '⚔ 🧹 Levi     42s', '◔ 🐸 Jiraiya  1h 05m'])
     // no elapsed figure: the identity alone
-    expect(text(rowsOf([{ key: 'senku', description: 'x' }], 30)[0] as Line)).toBe('⚗ 🧪 Senku')
+    expect(text(rowsOf([{ key: 'senku', description: 'x' }], 30)[0] as Line)).toBe('⚗ 🧪 Senku  ')
     // the elapsed figure is dim
     expect(lines[0]?.[lines[0].length - 1]?.dim).toBe(true)
   })
@@ -165,7 +166,7 @@ describe('band rows: width', () => {
     const rows: BandRow[] = [
       { ...SANJI, description: '日本語のタスク 🍣 with a mix of wide and narrow cells' },
       LEVI,
-      L,
+      JIRAIYA,
       { key: 'robin', description: '', tool: 'mcp__docs__search: terms', elapsedMs: 1, tokens: 1 },
     ]
     for (let columns = 1; columns <= 140; columns++) {
@@ -176,12 +177,12 @@ describe('band rows: width', () => {
   })
 
   test('overflow still folds into a +N more line; a single spare row is a summary', () => {
-    const three = planBand({ persona: 'shikamaru', rows: [SANJI, LEVI, L], frame: 0, columns: 120, maxRows: 3 })
-    expect(three.map(text)).toEqual([expect.stringContaining('Sanji'), expect.stringContaining('Levi'), expect.stringContaining('L  ')])
-    const two = planBand({ persona: 'shikamaru', rows: [SANJI, LEVI, L], frame: 0, columns: 120, maxRows: 2 })
+    const three = planBand({ persona: 'shikamaru', rows: [SANJI, LEVI, JIRAIYA], frame: 0, columns: 120, maxRows: 3 })
+    expect(three.map(text)).toEqual([expect.stringContaining('Sanji'), expect.stringContaining('Levi'), expect.stringContaining('Jiraiya')])
+    const two = planBand({ persona: 'shikamaru', rows: [SANJI, LEVI, JIRAIYA], frame: 0, columns: 120, maxRows: 2 })
     expect(two.map(text)).toEqual([expect.stringContaining('Sanji'), '+2 more'])
-    const one = planBand({ persona: 'shikamaru', rows: [SANJI, LEVI, L], frame: 0, columns: 120, maxRows: 1 })
-    expect(one.map(text)).toEqual(['🦌 3 out 🍳 🧹 🍰'])
+    const one = planBand({ persona: 'shikamaru', rows: [SANJI, LEVI, JIRAIYA], frame: 0, columns: 120, maxRows: 1 })
+    expect(one.map(text)).toEqual(['🦌 3 out 🍳 🧹 🐸'])
   })
 })
 
@@ -216,8 +217,8 @@ describe('band rows: tool name', () => {
 describe('band rows: colors', () => {
   test('identity in the character color of the palette in force; the rest uncolored or dim', () => {
     for (const mode of ['dark', 'light'] as const) {
-      const rows = rowsOf([SANJI, LEVI, L], 120, mode)
-      for (const [i, key] of (['sanji', 'levi', 'l'] as const).entries()) {
+      const rows = rowsOf([SANJI, LEVI, JIRAIYA], 120, mode)
+      for (const [i, key] of (['sanji', 'levi', 'jiraiya'] as const).entries()) {
         const row = rows[i] as Line
         expect(row[0]?.color, `${mode} ${key} glyph`).toBe(colorFor(key, mode))
         expect(row[1]?.color, `${mode} ${key} name`).toBe(colorFor(key, mode))
@@ -238,7 +239,7 @@ function world(on: On, opts: { env?: Record<string, string> } = {}) {
   mock.env(on, opts.env ?? { DOJO_STRATEGIST: 'shikamaru' })
   let agents: AgentInfo[] = []
   let n = 0
-  let spend = { input_tokens: 0, output_tokens: 0 }
+  let spend = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }
   on('ui.toast', () => ({ value: undefined }))
   on('audio.play', () => ({ value: undefined }))
   on('agent.list', () => ({ value: agents }))
@@ -246,7 +247,7 @@ function world(on: On, opts: { env?: Record<string, string> } = {}) {
   on('tool.call', () => ({ result: 'ok' as never }))
   on('turn.complete', (_$, e) => ({ text: e.answer }))
   on('turn.step', async function* (_$, e) {
-    const usage = spend.input_tokens + spend.output_tokens === 0 ? null : { model: MODEL_ID, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, ...spend }
+    const usage = spend.input_tokens + spend.output_tokens === 0 ? null : { model: MODEL_ID, ...spend }
     return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn' as const, usage }
   })
   on('ui.render', { component: 'AbovePrompt' }, ($, e) => $.ui.resolve(e).Text({ children: 'ENGINE-BAND' }))
@@ -256,8 +257,8 @@ function world(on: On, opts: { env?: Record<string, string> } = {}) {
       agents = next
     },
     /** What the model request beneath reports as its cost from now on. */
-    spend: (input_tokens: number, output_tokens: number) => {
-      spend = { input_tokens, output_tokens }
+    spend: (input_tokens: number, output_tokens: number, cache_read_input_tokens = 0, cache_creation_input_tokens = 0) => {
+      spend = { input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens }
     },
   }
 }
@@ -284,10 +285,10 @@ describe('band rows: live', () => {
     crew(w, ['ag-1', 'dojo:levi', 'QA the cart'])
     await $.agent.spawn(spawnInput('dojo:levi', undefined, 'QA the cart'))
     const ui = await mountBand($)
-    expect((await rowTexts(ui))[0]).toMatch(/^⚔ 🧹 Levi {3}QA the cart {2,}0s$/)
+    expect((await rowTexts(ui))[0]).toMatch(/^⚔ 🧹 Levi {5}QA the cart {2,}0s$/)
     await w.clock.advance(65_000)
     const later = (await rowTexts(ui))[0] ?? ''
-    expect(later).toMatch(/^\S 🧹 Levi {3}QA the cart {2,}1m 05s$/)
+    expect(later).toMatch(/^\S 🧹 Levi {5}QA the cart {2,}1m 05s$/)
     expect(cellWidth(later)).toBe(BAND_PROPS.bodyColumns - 1)
     await ui.unmount()
   })
@@ -307,7 +308,7 @@ describe('band rows: live', () => {
     await ui.unmount()
   })
 
-  test('tokens ride the row as the agent spends them: each model request adds its own', async ($, on) => {
+  test('tokens ride the row as the agent spends them: each request replaces the latest input and adds its output', async ($, on) => {
     const w = world(on)
     crew(w, ['ag-1', 'dojo:levi', 'QA the cart'])
     await $.agent.spawn(spawnInput('dojo:levi', undefined, 'QA the cart'))
@@ -318,11 +319,57 @@ describe('band rows: live', () => {
     expect(((await rowTexts(ui))[0] ?? '').endsWith('0s · ↓ 1.5k')).toBe(true)
     w.spend(100, 400)
     await step($, 'ag-1')
-    expect(((await rowTexts(ui))[0] ?? '').endsWith('0s · ↓ 2k')).toBe(true)
+    // latest input 100 + output 1000 + 400
+    expect(((await rowTexts(ui))[0] ?? '').endsWith('0s · ↓ 1.5k')).toBe(true)
     // the main loop's requests, and another agent's, are not this row's
     await step($)
     await step($, 'ag-other')
-    expect(((await rowTexts(ui))[0] ?? '').endsWith('0s · ↓ 2k')).toBe(true)
+    expect(((await rowTexts(ui))[0] ?? '').endsWith('0s · ↓ 1.5k')).toBe(true)
+    await ui.unmount()
+  })
+
+  test("the row shows Claude Code's own figure: the latest prompt with both cache fields, plus all output", async ($, on) => {
+    const w = world(on)
+    crew(w, ['ag-1', 'dojo:senku', 'Build the API'])
+    await $.agent.spawn(spawnInput('dojo:senku', undefined, 'Build the API'))
+    const ui = await mountBand($)
+    w.spend(10, 500, 70_000)
+    await step($, 'ag-1')
+    expect(((await rowTexts(ui))[0] ?? '').endsWith('0s · ↓ 70.5k')).toBe(true)
+    w.spend(20, 400, 78_000)
+    await step($, 'ag-1')
+    // 20 + 78000 + (500 + 400)
+    expect(((await rowTexts(ui))[0] ?? '').endsWith('0s · ↓ 78.9k')).toBe(true)
+    // a cache write counts as prompt too: 20 + 5000 + 1000
+    w.spend(20, 100, 0, 5_000)
+    await step($, 'ag-1')
+    expect(((await rowTexts(ui))[0] ?? '').endsWith('0s · ↓ 6k')).toBe(true)
+    // a request without usage changes nothing
+    w.spend(0, 0)
+    await step($, 'ag-1')
+    expect(((await rowTexts(ui))[0] ?? '').endsWith('0s · ↓ 6k')).toBe(true)
+    await ui.unmount()
+  })
+
+  test('the final response the turn reports is not counted twice after its step', async ($, on) => {
+    const w = world(on)
+    crew(w, ['ag-1', 'dojo:senku', 'Build the API'])
+    await $.agent.spawn(spawnInput('dojo:senku', undefined, 'Build the API'))
+    const ui = await mountBand($)
+    w.spend(10, 500, 70_000)
+    await step($, 'ag-1')
+    w.spend(20, 400, 78_000)
+    await step($, 'ag-1')
+    await $.turn.complete({
+      answer: 'x',
+      durationMs: 1000,
+      isAborted: false,
+      turnId: 't1',
+      agentId: 'ag-1',
+      reason: 'answer',
+      usage: { model: MODEL_ID, input_tokens: 20, output_tokens: 400, cache_read_input_tokens: 78_000, cache_creation_input_tokens: 0 },
+    } as never)
+    expect(((await rowTexts(ui))[0] ?? '').endsWith('0s · ↓ 78.9k')).toBe(true)
     await ui.unmount()
   })
 
@@ -403,7 +450,7 @@ describe('band rows: live', () => {
     await $.agent.spawn(spawnInput('dojo:levi', undefined, 'QA the cart'))
     await w.clock.advance(42_000)
     const ui = await mountBand($, { bodyColumns: 45 })
-    expect((await rowTexts(ui))[0]).toMatch(/^\S 🧹 Levi {3}42s$/)
+    expect((await rowTexts(ui))[0]).toMatch(/^\S 🧹 Levi {5}42s$/)
     await ui.unmount()
   })
 })

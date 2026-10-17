@@ -571,9 +571,9 @@ describe('palette mode', () => {
     // dark keeps the authored colors, lifted only where they fail on black (Lelouch's purple)
     expect(paint(lelouch, 'dark')).toEqual({ ...lelouch, color: '#9E62CA' })
     expect(paint(lelouch, 'light')).toEqual({ ...lelouch, color: lelouch.lightColor, accent: lelouch.lightAccent })
-    const l = CREW.l as (typeof CREW)[string]
-    expect(paint(l, 'light').color).toBe(l.lightColor)
-    expect(paint(l, 'light').color).not.toBe('#E0E0E0')
+    const jiraiya = CREW.jiraiya as (typeof CREW)[string]
+    expect(paint(jiraiya, 'light').color).toBe(jiraiya.lightColor)
+    expect(paint(jiraiya, 'light').color).not.toBe('#2E9E7F')
     expect(paint(NEUTRAL, 'light').accent).toBe(NEUTRAL.lightAccent)
     for (const t of [...Object.values(STRATEGISTS), NEUTRAL, ...Object.values(CREW)]) {
       expect(paint(t, 'light')).toMatchObject({ key: t.key, name: t.name, emoji: t.emoji, color: t.lightColor, accent: t.lightAccent })
@@ -596,8 +596,8 @@ describe('palette mode', () => {
     expect(withProp(frame, 'backgroundColor', '#9E62CA')).toHaveLength(1)
     const badge = await draw($, on, { component: 'ToolUse', props: toolUse({ tool_use_id: 'tu-9' }) })
     expect(withProp(badge, 'color', '#708090')).toHaveLength(1)
-    const card = await draw($, on, { component: 'ToolUse', props: agentUse('dojo:l') })
-    expect(withProp(card, 'borderColor', '#E0E0E0')).toHaveLength(1)
+    const card = await draw($, on, { component: 'ToolUse', props: agentUse('dojo:jiraiya') })
+    expect(withProp(card, 'borderColor', '#2E9E7F')).toHaveLength(1)
     const duty = await draw($, on, { component: 'CommandOutput', props: { command: 'dojo-duty', text: 'On duty: Shikamaru', isErrored: false } as never })
     expect(withProp(duty, 'borderColor', '#5B8C5A')).toHaveLength(1)
   })
@@ -621,9 +621,9 @@ describe('palette mode', () => {
     const badge = await draw($, on, { component: 'ToolUse', props: toolUse({ tool_use_id: 'tu-9' }) })
     expect(withProp(badge, 'color', CREW.levi?.lightColor)).toHaveLength(1)
     expect(withProp(badge, 'color', '#708090')).toHaveLength(0)
-    const card = await draw($, on, { component: 'ToolUse', props: agentUse('dojo:l') })
-    expect(withProp(card, 'borderColor', CREW.l?.lightColor)).toHaveLength(1)
-    expect(withProp(card, 'color', '#E0E0E0')).toHaveLength(0)
+    const card = await draw($, on, { component: 'ToolUse', props: agentUse('dojo:jiraiya') })
+    expect(withProp(card, 'borderColor', CREW.jiraiya?.lightColor)).toHaveLength(1)
+    expect(withProp(card, 'color', '#2E9E7F')).toHaveLength(0)
     const duty = await draw($, on, { component: 'CommandOutput', props: { command: 'dojo-duty', text: 'On duty: Shikamaru', isErrored: false } as never })
     expect(withProp(duty, 'borderColor', STRATEGISTS.shikamaru?.lightColor)).toHaveLength(1)
   })
@@ -718,7 +718,8 @@ describe('declutter: tool rows', () => {
 
   test('tinyMark keeps one short word and nothing longer', () => {
     expect(tinyMark('levi')).toBe('Filthy.')
-    expect(tinyMark('l')).toBe('Suspicious.')
+    expect(tinyMark('jiraiya')).toBe('Unverified.')
+    expect(tinyMark('kurisu')).toBe('Falsified.')
     expect(tinyMark('sanji')).toBeNull()
     expect(tinyMark('robin')).toBeNull()
     expect(tinyMark('nobody')).toBeNull()
@@ -946,6 +947,28 @@ describe('declutter: banner art is aligned', () => {
     }
   })
 
+  test('the Kurisu and Jiraiya banners: exact widths, name and caption in the box, a symmetric toad', () => {
+    expect((BANNERS.kurisu ?? []).map(r => r.length)).toEqual([36, 36, 36, 36])
+    expect((BANNERS.jiraiya ?? []).map(r => r.length)).toEqual([27, 27, 27, 27])
+    expect(BANNERS.kurisu?.[1]).toBe('|1|.|0|4|8|5|9|6|   K U R I S U     ')
+    expect(BANNERS.jiraiya?.[1]).toBe('/ .     . \\   J I R A I Y A')
+    // the meter's frame rows are the same string left to right
+    expect(BANNERS.kurisu?.[0]?.slice(0, 17)).toBe('.-.-.-.-.-.-.-.-.')
+    expect(BANNERS.kurisu?.[2]?.slice(0, 17)).toBe("'-'-'-'-'-'-'-'-'")
+  })
+
+  test('Kurisu and Jiraiya have their own lines, bubble and one-word marks; nothing of L remains', () => {
+    for (const key of ['kurisu', 'jiraiya']) {
+      for (const table of [DEPLOY_LINES, RETURN_LINES, FALLEN_LINES]) {
+        expect(table[key]?.length, key).toBeGreaterThan(0)
+        for (const text of table[key] ?? []) expect(text.length).toBeLessThanOrEqual(40)
+      }
+      expect(ERROR_MARKS[key]?.split(' ')).toHaveLength(1)
+      expect(BUBBLES[key]?.tail).toBeTruthy()
+    }
+    for (const table of [BANNERS, MOTIFS, DEPLOY_LINES, RETURN_LINES, FALLEN_LINES, ERROR_MARKS, BUBBLES]) expect(table).not.toHaveProperty('l')
+  })
+
   test("Levi's crossed blades are a symmetric X, left to right and top to bottom", () => {
     const mirror = (r: string) => [...r].reverse().map(c => (c === '/' ? '\\' : c === '\\' ? '/' : c)).join('')
     const art = (BANNERS.levi ?? []).map(r => r.slice(0, 6))
@@ -956,7 +979,7 @@ describe('declutter: banner art is aligned', () => {
 
   test('the drawings that centre on an axis are mirror-symmetric', () => {
     const mirror = (r: string) => [...r].reverse().map(c => ({ '/': '\\', '\\': '/', '(': ')', ')': '(', '[': ']', ']': '[' })[c] ?? c).join('')
-    for (const [key, width] of [['lelouch', 7], ['sanji', 11], ['light', 9], ['l', 9], ['senku', 9], ['robin', 7]] as const) {
+    for (const [key, width] of [['lelouch', 7], ['sanji', 11], ['light', 9], ['jiraiya', 11], ['senku', 9], ['robin', 7]] as const) {
       for (const row of (BANNERS[key] ?? []).map(r => r.slice(0, width).trimEnd().padEnd(width))) {
         // rows narrower than the drawing are centred in it
         const body = row.trim()

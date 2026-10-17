@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import { CREW, NEUTRAL, STRATEGISTS, WORDS, accentFor, colorFor, legible, resolveMode } from './theme'
+import { FRAMES_MORE, VERBS_MORE, VERB_CELLS } from './visuals/chrome-art'
+import { cellWidth } from './visuals/chrome-lib'
 import { paint } from './visuals/transcript-lib'
 
 const PALETTE: Record<string, [string, string]> = {
@@ -8,7 +10,8 @@ const PALETTE: Record<string, [string, string]> = {
   lelouch: ['#6A0DAD', '#D4AF37'],
   senku: ['#8BC34A', '#00BCD4'],
   sanji: ['#F4C430', '#1E3A8A'],
-  l: ['#E0E0E0', '#6B7280'],
+  kurisu: ['#C0522D', '#E8C4A8'],
+  jiraiya: ['#2E9E7F', '#D8D0B8'],
   light: ['#B22222', '#9CA3AF'],
   levi: ['#708090', '#2F4F4F'],
   robin: ['#E07AA5', '#4B3B6B'],
@@ -80,7 +83,7 @@ describe('palette modes', () => {
       expect(accentFor(t.key, 'dark')).toBe(contrast(t.accent, '#000000') >= 4.5 ? t.accent : legible(t.accent))
     }
     // Dark values are lifted here, where they are chosen, so the chrome and the transcript draw the same readable color.
-    for (const key of ['shikamaru', 'senku', 'sanji', 'l', 'robin', 'levi', 'strategist']) {
+    for (const key of ['shikamaru', 'senku', 'sanji', 'jiraiya', 'robin', 'levi', 'strategist']) {
       expect(contrast(colorFor(key, 'dark'), '#000000'), `${key} color`).toBeGreaterThanOrEqual(4.5)
     }
   })
@@ -144,7 +147,7 @@ describe('dark palette on black', () => {
     expect(accentFor('sanji', 'dark')).toBe('#6275AD')
     expect(accentFor('levi', 'dark')).toBe('#637B7B')
     expect(accentFor('robin', 'dark')).toBe('#817697')
-    expect(accentFor('l', 'dark')).toBe('#727986')
+    expect(colorFor('kurisu', 'dark')).toBe('#C35B38')
   })
 
   test('legible: lifts toward white in steps, is idempotent, and leaves non-hex values alone', () => {
@@ -172,6 +175,53 @@ describe('dark palette on black', () => {
     for (const t of everyone) {
       expect(colorFor(t.key, 'light')).toBe(t.lightColor)
       expect(accentFor(t.key, 'light')).toBe(t.lightAccent)
+    }
+  })
+})
+
+describe('kurisu and jiraiya', () => {
+  const pair = ['kurisu', 'jiraiya'] as const
+
+  test('identity: name, role and an emoji no one else uses; the old key is gone', () => {
+    expect([CREW.kurisu?.name, CREW.kurisu?.role]).toEqual(['Kurisu', 'architect'])
+    expect([CREW.jiraiya?.name, CREW.jiraiya?.role]).toEqual(['Jiraiya', 'web research'])
+    expect(CREW).not.toHaveProperty('l')
+    expect(WORDS).not.toHaveProperty('l')
+    const emojis = everyone.map(t => t.emoji)
+    expect(new Set(emojis).size).toBe(emojis.length)
+  })
+
+  test('both read at 4.5:1 on black and on white, in the lifted dark and the light pair', () => {
+    for (const key of pair) {
+      const t = CREW[key] as (typeof CREW)[string]
+      expect(contrast(colorFor(key, 'dark'), '#000000'), `${key} dark color`).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(accentFor(key, 'dark'), '#000000'), `${key} dark accent`).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(t.lightColor, '#FFFFFF'), `${key} light color`).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(t.lightAccent, '#FFFFFF'), `${key} light accent`).toBeGreaterThanOrEqual(4.5)
+    }
+    expect([colorFor('kurisu', 'dark'), colorFor('kurisu', 'light')]).toEqual(['#C35B38', '#A8441F'])
+    expect([colorFor('jiraiya', 'dark'), colorFor('jiraiya', 'light')]).toEqual(['#2E9E7F', '#1F7A5F'])
+  })
+
+  test('their colors are their own: no other character shares a primary color, dark or light', () => {
+    for (const key of pair) {
+      for (const other of everyone.filter(t => t.key !== key)) {
+        expect(colorFor(key, 'dark'), `${key} vs ${other.key}`).not.toBe(colorFor(other.key, 'dark'))
+        expect(colorFor(key, 'light'), `${key} vs ${other.key}`).not.toBe(colorFor(other.key, 'light'))
+      }
+    }
+  })
+
+  test('spinner words: verbs within the cell budget, eight single-width frames, a deploy line', () => {
+    for (const key of pair) {
+      const w = WORDS[key]
+      expect(w?.verbs.length).toBeGreaterThanOrEqual(5)
+      for (const v of [...(w?.verbs ?? []), ...(VERBS_MORE[key] ?? [])]) expect(cellWidth(v), `${key}: ${v}`).toBeLessThanOrEqual(VERB_CELLS)
+      const frames = [...(w?.frames ?? []), ...(FRAMES_MORE[key] ?? [])]
+      expect(frames).toHaveLength(8)
+      for (const f of frames) expect(cellWidth(f), `${key}: ${f}`).toBe(1)
+      expect(w?.deploy).not.toBe('')
+      expect(w?.done).toBeUndefined()
     }
   })
 })

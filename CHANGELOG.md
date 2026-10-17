@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.8.0
+
+### Added
+- `dojo:kurisu` (Kurisu, solutions architect, claude-sonnet-5-5, medium effort): options and trade-offs, solution designs, hypotheses and test methodology, small POCs in the scratchpad or an isolated worktree, as input to the strategist's decision. Never decides or ships code; replies `NEEDS INTEL: <question>` when research goes beyond a few targeted lookups.
+- Architect write guard (`architectGuard`, on by default): Edit, Write and NotebookEdit calls by `dojo:kurisu` are refused outside the system temp dir, a `/scratchpad/` path or a Claude Code worktree under `.claude/worktrees/`. Bash writes are not checked.
+- Routing section in the README: one fact → Light, multi-source facts → Jiraiya, design and POCs → Kurisu, build → Senku/Sanji, QA → Levi, docs → Robin; the strategist decides.
+
+### Changed
+- Models and effort: strategist claude-opus-5-5 medium; senku, sanji, levi, jiraiya claude-haiku-5-5 medium; light, robin claude-haiku-5-5 low.
+- Roles: builders, QA and docs execute precise briefs and reply `BLOCKED: <question>` instead of guessing; Light replies `NOT FOUND` instead of a second lookup; the strategist's brief template gains `Files:` and `Steps:`.
+- Crew token figures (band, `/dojo` stats, `/dojo-recap`) use Claude Code's formula: latest request's full input including cache, plus all output so far. They now match Claude Code's own agent list.
+- roleGuard points lookups at `dojo:jiraiya` or `dojo:light`.
+- Senku/Sanji boundary is by concern, not by file or server/client: Senku owns behaviour and data, Sanji owns presentation and interaction; the seam is a data contract. The strategist routes by concern.
+- Plugin internals: state-recording hooks moved to mods/state/recorders.tsx; visual installers only draw (the crew tick still lives in mods/visuals/chrome.tsx).
+- README redesigned with images in docs/assets/.
+
+### Breaking
+- `dojo:l` is renamed to `dojo:jiraiya` (pure multi-source web research with citations; no recommendations). Anything that called `dojo:l` must use `dojo:jiraiya`.
+
 ## 0.7.0
 
 ### Changed

@@ -254,7 +254,7 @@ describe('band: rows only', () => {
     const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props })
     const lines = (await ui.findAll({ type: 'Text' })).filter(t => t.props.wrap === 'truncate-end').map(t => t.text)
     expect(lines).toHaveLength(1)
-    expect(lines[0]).toMatch(/^\S 🧹 Levi {3}QA the cart/)
+    expect(lines[0]).toMatch(/^\S 🧹 Levi {5}QA the cart/)
     await ui.unmount()
   })
 })
@@ -457,7 +457,7 @@ describe('panes: readability', () => {
   test('roster: only emoji, names, status glyphs, the bar and the badge carry color; the rest is plain or dim', () => {
     for (const columns of [80, 50, 30]) {
       const allowed = (t: string) =>
-        /^(Senku|Sanji|L|Light|Levi|Robin)\s*$/.test(t) || // crew names
+        /^(Senku|Sanji|Kurisu|Jiraiya|Light|Levi|Robin)\s*$/.test(t) || // crew names
         /^[✔✖○]\s?$/.test(t.trim() + ' ') || // status glyphs
         t.trim().length === 1 || // an animated running glyph
         /^🦌 Shikamaru$/.test(t) || // the strategist
@@ -498,8 +498,8 @@ describe('panes: readability', () => {
     const lines = recap(60).map(text)
     const levi = lines.find(l => l.startsWith('🧹 Levi'))
     const senku = lines.find(l => l.startsWith('🧪 Senku'))
-    expect(levi).toBe('🧹 Levi  2 runs · 3m 12s · 14.2k tokens')
-    expect(senku).toBe('🧪 Senku 1 run · 5s ✖ fell ×1')
+    expect(levi).toBe('🧹 Levi    2 runs · 3m 12s · 14.2k tokens')
+    expect(senku).toBe('🧪 Senku   1 run · 5s ✖ fell ×1')
     expect(levi?.indexOf('2 runs')).toBe(senku?.indexOf('1 run'))
     expect(lines.some(l => l.startsWith('Fallen'))).toBe(false)
     expect(lines.filter(l => l.includes('fell'))).toHaveLength(1)
