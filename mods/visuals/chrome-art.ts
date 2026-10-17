@@ -113,6 +113,16 @@ export const CUE_GAP_MS = 500
 /** The usage line: labels, bar glyphs and the percentages where the color turns. Same for every persona. */
 export const USAGE_LABELS = { context: 'Chakra', stamina: 'Stamina', cost: '両' } as const
 export const USAGE_BAR = { full: '▰', empty: '▱', cells: 10, compactCells: 4 } as const
+/**
+ * Bar glyphs per persona key (`strategist` is the neutral set). Every glyph is one cell wide in text presentation:
+ * none is a CJK or emoji code point, and the chess pawn (U+265F, which many fonts draw as a two-cell emoji) is
+ * avoided for the knight (U+265E).
+ */
+export const USAGE_BARS: Record<string, { full: string; empty: string }> = {
+  strategist: { full: USAGE_BAR.full, empty: USAGE_BAR.empty },
+  shikamaru: { full: '≋', empty: '∙' },
+  lelouch: { full: '♞', empty: '⋅' },
+}
 export const USAGE_WARN_AT = 60
 export const USAGE_HOT_AT = 85
 /** Rate-limit window kind -> the short label drawn beside Stamina. */
@@ -123,4 +133,50 @@ export const USAGE_HOT_LINES: Record<string, { context: string; stamina: string 
   shikamaru: { context: 'Mendokusē… compact soon', stamina: 'Mendokusē… ease off' },
   lelouch: { context: 'The board narrows. Compact.', stamina: 'The clock runs short.' },
   strategist: { context: 'Compact soon', stamina: 'Ease off' },
+}
+
+// --- rank ----------------------------------------------------------------------------------------------------------
+
+/** Points (crew that returned successfully, cumulative) at which each rung of a ladder starts. */
+export const RANK_STEPS = [0, 25, 100, 300] as const
+/** Ladder per persona key; `strategist` is the neutral one and shares the Shikamaru names. */
+export const RANK_LADDERS: Record<string, readonly string[]> = {
+  shikamaru: ['Genin', 'Chūnin', 'Jōnin', 'Kage'],
+  lelouch: ['Pawn', 'Knight', 'Rook', 'King'],
+  strategist: ['Genin', 'Chūnin', 'Jōnin', 'Kage'],
+}
+/** Toast text on reaching rung 1, 2 or 3 (index 0 is never used), per persona key. */
+export const RANK_UP_LINES: Record<string, readonly string[]> = {
+  shikamaru: ['', 'More responsibility. What a drag.', 'More paperwork. Mendokusē.', 'The village is in order. Naps, finally.'],
+  lelouch: ['', 'The board tilts my way.', 'No line holds against me.', 'The board is mine.'],
+  strategist: ['', 'Crew record growing.', 'A steady record.', 'Top of the ladder.'],
+}
+/** Where the persistent points live in the plugin store. */
+export const RANK_STORE_KEY = 'rank'
+
+// --- recap ---------------------------------------------------------------------------------------------------------
+
+/** The strategist's closing line of the mission report: all clear, some fell, or nothing deployed. */
+export const RECAP_SIGNOFFS: Record<string, { clean: string; rough: string; empty: string }> = {
+  shikamaru: { clean: 'Move made. Your turn.', rough: 'Not clean, but it holds. What a drag.', empty: 'Nothing deployed. The best kind of day.' },
+  lelouch: { clean: 'Checkmate.', rough: 'A sacrifice was made. The board stands.', empty: 'No piece has moved. The board waits.' },
+  strategist: { clean: 'All crew accounted for.', rough: 'Some of the crew fell. Check their reports.', empty: 'No crew deployed this session.' },
+}
+
+// --- gallery -------------------------------------------------------------------------------------------------------
+
+/** Pages of /dojo-gallery, in order: the strategists, the neutral one, then the crew. */
+export const GALLERY_ORDER = ['shikamaru', 'lelouch', 'strategist', 'senku', 'sanji', 'l', 'light', 'levi', 'robin'] as const
+
+/** A sample `Says:` line per character, for the gallery's speech bubble (the persona files' own examples). */
+export const SAYS_SAMPLES: Record<string, string> = {
+  shikamaru: 'Move made. Your turn.',
+  lelouch: 'Checkmate.',
+  strategist: 'Plan set. Crew deployed.',
+  senku: 'Hypothesis confirmed. Get excited!',
+  sanji: 'Served. Merorin~ (swooning)',
+  l: 'I suspected as much. The case is closed.',
+  light: 'Exactly as expected. Done. Cleanly.',
+  levi: 'Mostly clean. Fix the corner I marked.',
+  robin: 'The record stands. History as it was.',
 }

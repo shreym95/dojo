@@ -2,10 +2,10 @@ import { describe, expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 import type { AgentInfo, EngineInterface, On, RenderComponent, RenderPropsOf, RenderSurface } from 'claude-code'
 
-import { CREW, STRATEGISTS } from '../theme'
+import { CREW, NEUTRAL, STRATEGISTS } from '../theme'
 import { agent, core } from '../lib/testkit'
 import { ASKS, BANNERS, BANNER_COLUMNS, BANNER_ROWS, BUBBLES, DEPLOY_LINES, ERROR_MARKS, FALLEN_LINES, MOTIFS, NEUTRAL_BANNER, RETURN_LINES } from './transcript-art'
-import { bannerRows, cells, clip, dojoCommand, dutyNameOf, extractSays, remember, agentFacts, LANE_CAP } from './transcript-lib'
+import { bannerRows, cells, clip, dojoCommand, dutyNameOf, extractSays, modeOf, paint, remember, agentFacts, LANE_CAP } from './transcript-lib'
 
 const PLUGIN = 'dojo'
 
@@ -106,7 +106,7 @@ describe('strategist frame', () => {
     setup(on, LELOUCH)
     const tree = await draw($, on, { component: 'AssistantMessage', props: msg })
     expect(lines(tree)[0]).toMatch(/^♟️ ♚ Lelouch ♚ ═+$/)
-    expect(withProp(tree, 'backgroundColor', '#6A0DAD')).toHaveLength(1)
+    expect(withProp(tree, 'backgroundColor', '#9E62CA')).toHaveLength(1)
     expect(withProp(tree, 'color', '#D4AF37').length).toBeGreaterThan(0)
   })
 
@@ -241,7 +241,7 @@ describe('crew cards', () => {
     for (const [key, c] of Object.entries(CREW)) {
       const tree = await draw($, on, { component: 'ToolUse', props: agentUse(`dojo:${key}`) })
       expect(lines(tree).some(r => r.startsWith(`${c.emoji} ${c.name} · ${c.role}`))).toBe(true)
-      expect(withProp(tree, 'borderColor', c.color)).toHaveLength(1)
+      expect(withProp(tree, 'borderColor', paint(c, 'dark').color)).toHaveLength(1)
     }
   })
 
@@ -378,7 +378,7 @@ describe('commands, questions, notices', () => {
     expect(has(rows, 'L E L O U C H')).toBe(true)
     expect(rows).toContain('♟️ ♚ Lelouch · on duty')
     expect(rows[rows.length - 1]).toBe(ENGINE)
-    expect(withProp(tree, 'borderColor', '#6A0DAD')).toHaveLength(1)
+    expect(withProp(tree, 'borderColor', '#9E62CA')).toHaveLength(1)
   })
 
   test('/dojo-voice is framed in the current strategist style, banner-free', async ($, on) => {
@@ -561,5 +561,70 @@ describe('art and helpers', () => {
     expect(Object.keys(table)).toHaveLength(LANE_CAP)
     expect(table['id-0']).toBeUndefined()
     expect(table[`id-${LANE_CAP + 19}`]).toBe('levi')
+  })
+})
+
+describe('palette mode', () => {
+  test('paint: light swaps in the light pair of the same character; dark changes nothing', () => {
+    const lelouch = STRATEGISTS.lelouch as (typeof STRATEGISTS)[string]
+    // dark keeps the authored colors, lifted only where they fail on black (Lelouch's purple)
+    expect(paint(lelouch, 'dark')).toEqual({ ...lelouch, color: '#9E62CA' })
+    expect(paint(lelouch, 'light')).toEqual({ ...lelouch, color: lelouch.lightColor, accent: lelouch.lightAccent })
+    const l = CREW.l as (typeof CREW)[string]
+    expect(paint(l, 'light').color).toBe(l.lightColor)
+    expect(paint(l, 'light').color).not.toBe('#E0E0E0')
+    expect(paint(NEUTRAL, 'light').accent).toBe(NEUTRAL.lightAccent)
+    for (const t of [...Object.values(STRATEGISTS), NEUTRAL, ...Object.values(CREW)]) {
+      expect(paint(t, 'light')).toMatchObject({ key: t.key, name: t.name, emoji: t.emoji, color: t.lightColor, accent: t.lightAccent })
+    }
+  })
+
+  test('modeOf: only the exact string "light" turns the light palette on', () => {
+    expect(modeOf('light')).toBe('light')
+    expect(modeOf('dark')).toBe('dark')
+    expect(modeOf(undefined)).toBe('dark')
+    expect(modeOf(null)).toBe('dark')
+    expect(modeOf('LIGHT')).toBe('dark')
+    expect(modeOf(1)).toBe('dark')
+  })
+
+  test('with no palette state written yet, every owned component draws the original colors', async ($, on) => {
+    setup(on, LELOUCH, [agent('ag-levi', 'dojo:levi')])
+    await $.tool.call({ tool: 'Bash', command: 'ls', tool_use_id: 'tu-9', agentId: 'ag-levi' } as never)
+    const frame = await draw($, on, { component: 'AssistantMessage', props: msg })
+    expect(withProp(frame, 'backgroundColor', '#9E62CA')).toHaveLength(1)
+    expect(withProp(frame, 'color', '#D4AF37').length).toBeGreaterThan(0)
+    const badge = await draw($, on, { component: 'ToolUse', props: toolUse({ tool_use_id: 'tu-9' }) })
+    expect(withProp(badge, 'color', '#708090')).toHaveLength(1)
+    const card = await draw($, on, { component: 'ToolUse', props: agentUse('dojo:l') })
+    expect(withProp(card, 'borderColor', '#E0E0E0')).toHaveLength(1)
+    const duty = await draw($, on, { component: 'CommandOutput', props: { command: 'dojo-duty', text: 'On duty: Shikamaru', isErrored: false } as never })
+    expect(withProp(duty, 'borderColor', '#5B8C5A')).toHaveLength(1)
+  })
+
+  /** The palette written the way a person's theme change writes it: through the chrome module's config.set hook. */
+  async function chooseTheme($: Engine, on: On, theme: string) {
+    on('config.list', () => ({ value: [] }) as never)
+    on('config.set', (_$, e) => ({ value: e.value }) as never)
+    return () => $.config.set({ key: 'theme', value: theme } as never)
+  }
+
+  test('a light engine theme: the frame, seal, badge, crew card and command frame draw the light colors', async ($, on) => {
+    setup(on, LELOUCH, [agent('ag-levi', 'dojo:levi')])
+    const apply = await chooseTheme($, on, 'light')
+    await apply()
+    await $.tool.call({ tool: 'Bash', command: 'ls', tool_use_id: 'tu-9', agentId: 'ag-levi' } as never)
+    const lelouch = STRATEGISTS.lelouch as (typeof STRATEGISTS)[string]
+    const frame = await draw($, on, { component: 'AssistantMessage', props: msg })
+    expect(withProp(frame, 'color', lelouch.lightAccent).length).toBeGreaterThan(0)
+    expect(withProp(frame, 'color', '#D4AF37')).toHaveLength(0)
+    const badge = await draw($, on, { component: 'ToolUse', props: toolUse({ tool_use_id: 'tu-9' }) })
+    expect(withProp(badge, 'color', CREW.levi?.lightColor)).toHaveLength(1)
+    expect(withProp(badge, 'color', '#708090')).toHaveLength(0)
+    const card = await draw($, on, { component: 'ToolUse', props: agentUse('dojo:l') })
+    expect(withProp(card, 'borderColor', CREW.l?.lightColor)).toHaveLength(1)
+    expect(withProp(card, 'color', '#E0E0E0')).toHaveLength(0)
+    const duty = await draw($, on, { component: 'CommandOutput', props: { command: 'dojo-duty', text: 'On duty: Shikamaru', isErrored: false } as never })
+    expect(withProp(duty, 'borderColor', STRATEGISTS.shikamaru?.lightColor)).toHaveLength(1)
   })
 })

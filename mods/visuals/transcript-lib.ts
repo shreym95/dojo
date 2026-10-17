@@ -1,6 +1,8 @@
 import { BANNERS, BANNER_COLUMNS, BANNER_ROWS, NEUTRAL_BANNER } from './transcript-art'
 import { crewKey } from '../lib/persona'
 import { hash } from '../lib/text'
+import { accentFor, colorFor } from '../theme'
+import type { PaletteMode, Theme } from '../theme'
 
 // Pure helpers for visuals/transcript.tsx: no `$`, no engine. Everything here is plain data in, plain data out.
 
@@ -165,3 +167,9 @@ export function dojoCommand(name: string): 'dojo-duty' | 'dojo-voice' | null {
   const m = /(?:^|:)(dojo-duty|dojo-voice)$/.exec(name)
   return m === null ? null : (m[1] as 'dojo-duty' | 'dojo-voice')
 }
+
+/** The palette mode a stored `dojo.paletteMode` value means: `light` only when it says so exactly. */
+export const modeOf = (value: unknown): PaletteMode => (value === 'light' ? 'light' : 'dark')
+
+/** `t` with its color and accent resolved for `mode`. Every color the transcript draws comes through here. */
+export const paint = (t: Theme, mode: PaletteMode): Theme => ({ ...t, color: colorFor(t.key, mode), accent: accentFor(t.key, mode) })

@@ -1,17 +1,26 @@
-import { CREW, NEUTRAL, STRATEGISTS, WORDS } from '../theme'
+import { CREW, NEUTRAL, STRATEGISTS, WORDS, accentFor, colorFor } from '../theme'
+import type { PaletteMode, Theme } from '../theme'
 import { hash, pick, truncate } from '../lib/text'
-import type { DojoRosterEntry, DojoUsage } from '../state'
+import type { DojoCrewStats, DojoRank, DojoRosterEntry, DojoUsage } from '../state'
 import {
   BAND_HEADER,
   DEFAULT_VOICE,
+  DEPLOY_MORE,
   FALL_LINES,
   FRAMES_MORE,
+  GALLERY_ORDER,
   HINTS,
   LONG_TURN_MS,
   MODELS,
   MODE_LABELS,
+  RANK_LADDERS,
+  RANK_STEPS,
+  RANK_UP_LINES,
+  RECAP_SIGNOFFS,
+  SAYS_SAMPLES,
   TURN_LONG,
   USAGE_BAR,
+  USAGE_BARS,
   USAGE_HOT_AT,
   USAGE_HOT_LINES,
   USAGE_LABELS,
@@ -19,6 +28,7 @@ import {
   VERBS_MORE,
   WINDOW_LABELS,
 } from './chrome-art'
+import { BANNERS, BANNER_COLUMNS, BANNER_ROWS, BUBBLES, NEUTRAL_BANNER, RETURN_LINES } from './transcript-art'
 
 // Pure helpers for visuals/chrome.tsx: width math, color, wording and the line plans the hooks draw.
 // A plan is plain data (Line[]); chrome.tsx turns it into Box and Text, because only a hook may reach the element table.
@@ -98,27 +108,11 @@ const pad = (text: string, cells: number) => text + ' '.repeat(Math.max(0, cells
 
 // --- color -------------------------------------------------------------------------------------------------------
 
-const channel = (v: number) => {
-  const c = v / 255
-  return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
-}
+export { legible } from '../theme'
 
-function luminance(hex: string): number {
-  const n = parseInt(hex.slice(1), 16)
-  return 0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255)
-}
-
-/** The hex lightened toward white until it holds 4.5:1 against a black terminal; light colors come back as given. */
-export function legible(hex: string): string {
-  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return hex
-  const n = parseInt(hex.slice(1), 16)
-  const rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-  for (let t = 0; t <= 1.0001; t += 0.05) {
-    const mixed = rgb.map(c => Math.round(c + (255 - c) * t))
-    const out = '#' + mixed.map(c => c.toString(16).padStart(2, '0')).join('').toUpperCase()
-    if (luminance(out) >= 0.18) return out
-  }
-  return '#FFFFFF'
+/** The color the chrome draws character `key` in: the palette's own value for `mode` (dark is already lifted to read on black). */
+export function tint(key: string, mode: PaletteMode = 'dark'): string {
+  return colorFor(key, mode)
 }
 
 // --- wording -----------------------------------------------------------------------------------------------------
@@ -207,7 +201,41 @@ export function themedModes(persona: string | null, modes: readonly string[]): s
 
 // --- crew band ---------------------------------------------------------------------------------------------------
 
-export type BandRow = { key: string; description: string; tool?: string }
+export type BandRow = {
+  key: string
+  description: string
+  /** The latest tool line (`Bash: npm test`); only its name is ever drawn. */
+  tool?: string
+  /** Milliseconds since the agent started; none when its start is unknown. */
+  elapsedMs?: number
+  /** Tokens it has spent so far; none (or 0) when no figure is known. */
+  tokens?: number
+}
+
+/** Rows narrower than this keep only the identity and the elapsed time. */
+const BAND_NARROW = 50
+/** Cells the task must keep for the token figure to stay on the row. */
+const TASK_WITH_TOKENS = 20
+/** Cells the task must keep, cut short, for the tool name to stay beside it. */
+const TASK_WITH_TOOL = 16
+const BAND_GAP = 2
+const NAME_CELLS = Math.max(...Object.values(CREW).map(c => cellWidth(c.name)))
+
+/** `Bash` from `Bash: npm test`; a tool line that does not start with a plain name gives undefined, never the command. */
+export function toolName(line: string | undefined): string | undefined {
+  if (line === undefined) return undefined
+  const head = (line.split(':')[0] ?? '').trim()
+  const name = head.includes('__') ? (head.split('__').pop() ?? '') : head
+  return /^[A-Za-z][A-Za-z0-9_.-]{0,23}$/.test(name) ? name : undefined
+}
+
+/** `2m 37s · ↓ 58.5k`: the right column of a row. `withTokens` false leaves the token figure out. */
+function rightText(r: BandRow, withTokens: boolean): string {
+  const parts: string[] = []
+  if (r.elapsedMs !== undefined && Number.isFinite(r.elapsedMs)) parts.push(fmtDuration(r.elapsedMs))
+  if (withTokens && r.tokens !== undefined && r.tokens > 0) parts.push(`↓ ${fmtTokens(r.tokens)}`)
+  return parts.join(' · ')
+}
 
 const fill = (template: string, n: number) => template.replace('{n}', String(n))
 
@@ -226,28 +254,78 @@ function headerText(persona: string, n: number, columns: number): string {
  * color. Never more than `maxRows` lines and never wider than `columns`; overflow becomes one dim `+N more` line,
  * and a band of a single row is one summary line.
  */
-export function planBand(input: { persona: string | null; rows: readonly BandRow[]; frame: number; columns: number; maxRows: number }): Line[] {
+export function planBand(input: {
+  persona: string | null
+  rows: readonly BandRow[]
+  frame: number
+  columns: number
+  maxRows: number
+  mode?: PaletteMode
+}): Line[] {
   const { persona, rows, frame, columns } = input
+  const mode = input.mode ?? 'dark'
   const maxRows = Math.max(1, input.maxRows)
   const theme = persona === null ? undefined : STRATEGISTS[persona]
-  const row = (r: BandRow): Line => {
+  const cells = Math.max(1, columns - 1)
+  const lead = (r: BandRow): { head: Seg; name: Seg; width: number } | undefined => {
     const c = CREW[r.key]
-    // one cell less than the width: the emoji at the start is two cells to the code point's one
-    const text = bandLine({ key: r.key, description: r.description, tool: r.tool, frame }, Math.max(1, columns - 1))
-    return [{ text, ...(c === undefined ? {} : { color: legible(c.color) }) }]
+    if (c === undefined) return undefined
+    const frames = framesOf(r.key)
+    const color = tint(c.key, mode)
+    const head = { text: `${frames[frame % frames.length] ?? ''} ${c.emoji} `, color }
+    const name = { text: pad(c.name, NAME_CELLS), color, bold: true }
+    return { head, name, width: cellWidth(head.text) + NAME_CELLS }
+  }
+  // the right column is one shape for the whole band: tokens go for every row at once, so the figures stay in line
+  const wide = columns >= BAND_NARROW
+  const rightWidth = (withTokens: boolean) => Math.max(0, ...rows.map(r => cellWidth(rightText(r, withTokens))))
+  const leadCells = Math.max(NAME_CELLS + 5, ...rows.map(r => lead(r)?.width ?? 0))
+  const space = (right: number) => cells - leadCells - BAND_GAP - (right === 0 ? 0 : right + BAND_GAP)
+  const withTokens = wide && space(rightWidth(true)) >= TASK_WITH_TOKENS
+  const rightCells = wide ? rightWidth(withTokens) : 0
+  const row = (r: BandRow): Line => {
+    const l = lead(r)
+    if (l === undefined) return []
+    const out: Line = [l.head, l.name]
+    if (!wide) {
+      const elapsed = rightText(r, false)
+      return clipLine(elapsed === '' ? out : [...out, { text: ' '.repeat(BAND_GAP) + elapsed, dim: true }], cells)
+    }
+    const right = rightText(r, withTokens)
+    const avail = Math.max(0, space(rightCells))
+    const task = r.description.replace(/\s+/g, ' ').trim()
+    const tool = toolName(r.tool)
+    const toolText = tool === undefined ? '' : ` · ${tool}`
+    let shownTask = task
+    let shownTool = toolText
+    if (cellWidth(task) + cellWidth(toolText) > avail) {
+      if (toolText !== '' && withTokens && avail - cellWidth(toolText) >= TASK_WITH_TOOL) shownTask = clip(task, avail - cellWidth(toolText))
+      else {
+        shownTool = ''
+        shownTask = clip(task, avail)
+      }
+    }
+    out.push({ text: ' '.repeat(BAND_GAP) })
+    if (shownTask !== '') out.push({ text: shownTask })
+    if (shownTool !== '') out.push({ text: shownTool, dim: true })
+    if (right !== '') {
+      const used = l.width + BAND_GAP + cellWidth(shownTask) + cellWidth(shownTool)
+      out.push({ text: ' '.repeat(Math.max(1, cells - used - cellWidth(right))) + right, dim: true })
+    }
+    return clipLine(out, cells)
   }
   const header = (): Line => {
     const frames = framesOf(theme?.key ?? 'strategist')
     const glyph = frames[frame % frames.length] ?? ''
     const base = headerText(persona as string, rows.length, columns - 2)
-    return clipLine([{ text: `${base} ${glyph}`, color: legible(theme?.color ?? '#94A3B8'), bold: true }], columns)
+    return clipLine([{ text: `${base} ${glyph}`, color: tint(theme?.key ?? 'strategist', mode), bold: true }], columns)
   }
   const head = theme === undefined || persona === null ? [] : [header()]
   if (head.length + rows.length <= maxRows) return [...head, ...rows.map(row)]
   if (maxRows === 1) {
     const emojis = rows.map(r => CREW[r.key]?.emoji ?? '').join(' ')
     const lead = theme === undefined ? '' : `${theme.emoji} `
-    return [clipLine([{ text: `${lead}${rows.length} out ${emojis}`, color: legible(theme?.color ?? '#94A3B8'), bold: true }], columns)]
+    return [clipLine([{ text: `${lead}${rows.length} out ${emojis}`, color: tint(theme?.key ?? 'strategist', mode), bold: true }], columns)]
   }
   const room = maxRows - head.length - 1
   const hidden = rows.length - room
@@ -277,10 +355,17 @@ export function snapshotUsage(source: {
 
 const clampPercent = (p: number) => Math.min(100, Math.max(0, Math.round(p)))
 
-/** `▰▰▰▱▱▱▱▱▱▱`: the bar filled up to the next whole cell. */
-export function usageBar(percent: number, cells: number): string {
+/** The bar glyphs of a persona key (the neutral ones for no persona or an unknown key). */
+export function barGlyphs(persona: string | null): { full: string; empty: string } {
+  return (persona === null ? undefined : USAGE_BARS[persona]) ?? (USAGE_BARS.strategist as { full: string; empty: string })
+}
+
+/** `▰▰▰▱▱▱▱▱▱▱`: the bar filled up to the next whole cell, in the glyphs of `persona` (neutral when omitted). */
+export function usageBar(percent: number, cells: number, persona: string | null = null): string {
+  cells = Math.max(0, cells)
   const filled = Math.min(cells, Math.max(0, Math.ceil((clampPercent(percent) * cells) / 100)))
-  return USAGE_BAR.full.repeat(filled) + USAGE_BAR.empty.repeat(cells - filled)
+  const { full, empty } = barGlyphs(persona)
+  return full.repeat(filled) + empty.repeat(cells - filled)
 }
 
 /** The color of a figure: the strategist's below the warning mark, then the theme's warning and error colors. */
@@ -293,11 +378,11 @@ export function usageColor(percent: number, base: string): string {
  * The one usage row as a line, or none when no figure is known. Wide terminals get the full row, dropping the persona
  * warning, then the cost, when they do not fit; under 50 columns it is the compact form. Never wider than `columns`.
  */
-export function planUsage(input: { persona: string | null; usage: DojoUsage; columns: number }): Line | undefined {
+export function planUsage(input: { persona: string | null; usage: DojoUsage; columns: number; mode?: PaletteMode }): Line | undefined {
   const { usage, columns } = input
   if (usage.percent === null && usage.limit === null && usage.usd === null) return undefined
   const theme = (input.persona === null ? undefined : STRATEGISTS[input.persona]) ?? NEUTRAL
-  const base = legible(theme.color)
+  const base = tint(theme.key, input.mode ?? 'dark')
   const lead: Seg = { text: `${theme.emoji} ` }
   const sep: Seg = { text: ' · ', dim: true }
   const room = Math.max(1, columns - 1)
@@ -315,7 +400,7 @@ export function planUsage(input: { persona: string | null; usage: DojoUsage; col
     parts.push(
       ctx === undefined
         ? [{ text: `${USAGE_LABELS.context} —` }]
-        : [{ text: `${USAGE_LABELS.context} ` }, figure(ctx, usageBar(ctx, USAGE_BAR.cells)), figure(ctx, ` ${ctx}%`)],
+        : [{ text: `${USAGE_LABELS.context} ` }, figure(ctx, usageBar(ctx, USAGE_BAR.cells, theme.key)), figure(ctx, ` ${ctx}%`)],
     )
     if (sta !== undefined) {
       parts.push([{ text: `${USAGE_LABELS.stamina} ` }, figure(sta, `${sta}%`), ...(window === '' ? [] : [{ text: ` (${window})`, dim: true }])])
@@ -327,7 +412,7 @@ export function planUsage(input: { persona: string | null; usage: DojoUsage; col
 
   const compact = (): Line => {
     const parts: Line[] = []
-    parts.push(ctx === undefined ? [{ text: '—' }] : [figure(ctx, usageBar(ctx, USAGE_BAR.compactCells)), figure(ctx, ` ${ctx}%`)])
+    parts.push(ctx === undefined ? [{ text: '—' }] : [figure(ctx, usageBar(ctx, USAGE_BAR.compactCells, theme.key)), figure(ctx, ` ${ctx}%`)])
     if (sta !== undefined) parts.push([figure(sta, `${sta}%`)])
     return [lead, ...join(parts)]
   }
@@ -339,6 +424,155 @@ export function planUsage(input: { persona: string | null; usage: DojoUsage; col
     }
   }
   return clipLine(compact(), room)
+}
+
+// --- rank --------------------------------------------------------------------------------------------------------
+
+export type RankInfo = {
+  name: string
+  /** Rung on the ladder, 0 the lowest. */
+  index: number
+  points: number
+  /** The next rung and the points it starts at; undefined at the top. */
+  next?: { name: string; at: number }
+  /** 0 to 100 toward the next rung (100 at the top). */
+  percent: number
+  /** False when the points live only in this session. */
+  saved: boolean
+}
+
+/** The rung `points` stand on in the ladder of `persona` (neutral names for no persona). */
+export function rankOf(points: number, persona: string | null, saved = true): RankInfo {
+  const ladder = (persona === null ? undefined : RANK_LADDERS[persona]) ?? (RANK_LADDERS.strategist as readonly string[])
+  const p = Math.max(0, Math.floor(Number.isFinite(points) ? points : 0))
+  let index = 0
+  RANK_STEPS.forEach((at, i) => {
+    if (p >= at) index = i
+  })
+  const floor = RANK_STEPS[index] ?? 0
+  const at = RANK_STEPS[index + 1]
+  const name = ladder[index] ?? ''
+  if (at === undefined) return { name, index, points: p, percent: 100, saved }
+  return { name, index, points: p, next: { name: ladder[index + 1] ?? '', at }, percent: ((p - floor) / (at - floor)) * 100, saved }
+}
+
+/** The rank-up toast text for reaching `info`'s rung, in the voice of `persona`. */
+export function rankUpText(info: RankInfo, persona: string | null): string {
+  const t = persona === null ? undefined : STRATEGISTS[persona]
+  const lines = RANK_UP_LINES[persona === null || RANK_UP_LINES[persona] === undefined ? 'strategist' : persona] ?? []
+  const line = lines[info.index] ?? ''
+  return `${(t ?? NEUTRAL).emoji} Rank up: ${info.name}${line === '' ? '' : ` — "${line}"`}`
+}
+
+const BAR_CELLS = 8
+
+/** The rank as one line: the widest form that fits `columns`, down to name and points. */
+export function rankLine(info: RankInfo, persona: string | null, columns: number, mode: PaletteMode = 'dark'): Line {
+  const theme = (persona === null ? undefined : STRATEGISTS[persona]) ?? NEUTRAL
+  const color = tint(theme.key, mode)
+  const tag = info.saved ? '' : ' (this session)'
+  const shortTag = info.saved ? '' : ' (session)'
+  const bar = usageBar(info.percent, BAR_CELLS, theme.key)
+  const name = (text: string): Seg => ({ text, color, bold: true })
+  const toward = info.next === undefined ? undefined : `${info.points}/${info.next.at} → ${info.next.name}`
+  const rest = toward ?? `${info.points} pts`
+  const candidates: Line[] = [
+    [{ text: 'Rank: ' }, name(info.name), { text: ' ' }, { text: bar, color }, { text: ` ${rest}${info.next === undefined ? ' · top rank' : ''}${tag}` }],
+    [{ text: 'Rank: ' }, name(info.name), { text: ` ${rest}${tag}` }],
+    [name(info.name), { text: ` ${info.next === undefined ? info.points : `${info.points}/${info.next.at}`}${shortTag}` }],
+  ]
+  const width = (l: Line) => l.reduce((n, seg) => n + cellWidth(seg.text), 0)
+  return candidates.find(l => width(l) <= columns) ?? clipLine(candidates[2] as Line, columns)
+}
+
+/** The stats table with `delta` added to `key`'s figures; a new table, the old one untouched. */
+export function addStats(table: Readonly<Record<string, DojoCrewStats>>, key: string, delta: Partial<DojoCrewStats>): Record<string, DojoCrewStats> {
+  const cur = table[key] ?? { runs: 0, returned: 0, fell: 0, ms: 0, tokens: 0 }
+  const says = delta.says ?? cur.says
+  return {
+    ...table,
+    [key]: {
+      runs: cur.runs + (delta.runs ?? 0),
+      returned: cur.returned + (delta.returned ?? 0),
+      fell: cur.fell + (delta.fell ?? 0),
+      ms: cur.ms + (delta.ms ?? 0),
+      tokens: cur.tokens + (delta.tokens ?? 0),
+      ...(says === undefined ? {} : { says }),
+    },
+  }
+}
+
+/** Tokens a turn spent: input plus output; cache reads and writes are left out. Any shape is tolerated. */
+export function tokensOf(usage: unknown): number {
+  if (typeof usage !== 'object' || usage === null) return 0
+  const u = usage as Record<string, unknown>
+  const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0)
+  return n(u.input_tokens) + n(u.output_tokens)
+}
+
+// --- crew stats --------------------------------------------------------------------------------------------------
+
+/** `42s`, `3m 12s`, `1h 05m`. */
+export function fmtDuration(ms: number): string {
+  const s = Math.max(0, Math.round(ms / 1000))
+  if (s < 60) return `${s}s`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m}m ${String(s % 60).padStart(2, '0')}s`
+  return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`
+}
+
+/** `850`, `14.2k`, `1.2M`. */
+export function fmtTokens(n: number): string {
+  if (n < 1000) return String(Math.max(0, Math.round(n)))
+  if (n < 1_000_000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`
+  return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
+}
+
+/**
+ * The crew key deployed most this session, or null when nobody ran twice. A tie on runs goes to the member with
+ * the longer total run time, then to the earlier one in the crew order.
+ */
+export function mostDeployed(stats: Readonly<Record<string, DojoCrewStats>>): string | null {
+  let best: string | null = null
+  for (const key of Object.keys(CREW)) {
+    const st = stats[key]
+    if (st === undefined || st.runs < 1) continue
+    const top = best === null ? undefined : stats[best]
+    if (top === undefined || st.runs > top.runs || (st.runs === top.runs && st.ms > top.ms)) best = key
+  }
+  const winner = best === null ? undefined : stats[best]
+  return winner !== undefined && winner.runs >= 2 ? best : null
+}
+
+/** The figures of one member, widest to narrowest: `2 runs · 3m 12s · 14.2k tokens`, `2× · 3m 12s · 14.2k tok`, `2× 3m 12s 14.2k`. */
+function statForms(st: DojoCrewStats): [string, string, string] {
+  const time = st.ms > 0 ? fmtDuration(st.ms) : ''
+  const tok = st.tokens > 0 ? fmtTokens(st.tokens) : ''
+  const join = (parts: string[], sep: string) => parts.filter(p => p !== '').join(sep)
+  return [
+    join([`${st.runs} ${st.runs === 1 ? 'run' : 'runs'}`, time, tok === '' ? '' : `${tok} tokens`], ' · '),
+    join([`${st.runs}×`, time, tok === '' ? '' : `${tok} tok`], ' · '),
+    join([`${st.runs}×`, time, tok], ' '),
+  ]
+}
+
+/** One dim line under a crew member: runs, run time, tokens and the most-deployed badge. Undefined when it never ran. */
+function statsLine(key: string, st: DojoCrewStats | undefined, isTop: boolean, columns: number, indent: number, mode: PaletteMode): Line | undefined {
+  if (st === undefined || st.runs < 1) return undefined
+  const [wide, mid, narrow] = statForms(st)
+  const fits = (text: string) => indent + cellWidth(text) <= columns
+  const plan = isTop
+    ? [`${wide} · ★ most deployed`, `${wide} ★`, `${mid} ★`, `${narrow} ★`, narrow]
+    : [wide, mid, narrow]
+  const text = plan.find(fits) ?? clip(narrow, Math.max(1, columns - indent))
+  const star = text.indexOf('★')
+  const pad = ' '.repeat(indent)
+  if (star < 0) return [{ text: pad + text, dim: true }]
+  const badgeAt = text.lastIndexOf(' · ★') >= 0 ? text.lastIndexOf(' · ★') + 3 : star
+  return [
+    { text: pad + text.slice(0, badgeAt), dim: true },
+    { text: text.slice(badgeAt), color: tint(key, mode), bold: true },
+  ]
 }
 
 // --- roster pane -------------------------------------------------------------------------------------------------
@@ -354,17 +588,22 @@ export type RosterInput = {
   entries: Readonly<Record<string, RosterEntry>>
   frame: number
   columns: number
+  /** The palette in force; dark when omitted. */
+  mode?: PaletteMode
+  /** Per-crew runs, time and tokens this session. */
+  stats?: Readonly<Record<string, DojoCrewStats>>
+  /** Rank points to show under the header; none when omitted (the rank toggle is off). */
+  rank?: DojoRank
 }
 
 const MEDIUM = 36
 const WIDE_PANE = 64
 
-function statusOf(key: string, entry: RosterEntry | undefined, frame: number): { glyph: string; color: string; word: string } {
-  const c = CREW[key]
+function statusOf(key: string, entry: RosterEntry | undefined, frame: number, mode: PaletteMode): { glyph: string; color: string; word: string } {
   switch (entry?.status) {
     case 'running': {
       const frames = framesOf(key)
-      return { glyph: frames[frame % frames.length] ?? '●', color: legible(c?.color ?? '#94A3B8'), word: 'running' }
+      return { glyph: frames[frame % frames.length] ?? '●', color: tint(CREW[key]?.key ?? 'strategist', mode), word: 'running' }
     }
     case 'returned':
       return { glyph: '✔', color: 'success', word: entry.count > 1 ? `returned ×${entry.count}` : 'returned' }
@@ -375,23 +614,26 @@ function statusOf(key: string, entry: RosterEntry | undefined, frame: number): {
   }
 }
 
-function quoteLine(key: string, entry: RosterEntry | undefined, indent: number): Line | undefined {
+function quoteLine(key: string, entry: RosterEntry | undefined, indent: number, mode: PaletteMode): Line | undefined {
   const c = CREW[key]
   const text = entry?.says !== undefined ? `“${entry.says}”` : entry?.status === 'fell' ? (FALL_LINES[key] ?? '') : ''
   if (text === '' || c === undefined) return undefined
-  return [{ text: ' '.repeat(indent) + text, color: legible(c.color), italic: true, dim: entry?.says === undefined }]
+  return [{ text: ' '.repeat(indent) + text, color: tint(c.key, mode), italic: true, dim: entry?.says === undefined }]
 }
 
-/** The /dojo pane as lines: who is on duty and at what voice level, a tally, then every crew member. */
+/** The /dojo pane as lines: who is on duty and at what voice level, a tally, the rank, then every crew member. */
 export function rosterLines(input: RosterInput): Line[] {
   const { persona, entries, frame, columns } = input
+  const mode = input.mode ?? 'dark'
+  const stats = input.stats ?? {}
+  const top = mostDeployed(stats)
   const t = persona === null ? undefined : STRATEGISTS[persona]
   const lines: Line[] = []
 
   lines.push(
     t === undefined
       ? [{ text: 'No strategist on duty', dim: true }]
-      : [{ text: `${t.emoji} ${t.name} on duty`, color: legible(t.color), bold: true }],
+      : [{ text: `${t.emoji} ${t.name} on duty`, color: tint(t.key, mode), bold: true }],
   )
   const voice = input.voice ?? DEFAULT_VOICE
   const source = input.voice === null ? 'roster default' : 'override'
@@ -408,16 +650,18 @@ export function rosterLines(input: RosterInput): Line[] {
     `${tally[0]} run ${tally[1]} ret ${tally[2]} fell ${tally[3]} idle`,
   ]
   lines.push([{ text: tallies.find(t => cellWidth(t) <= columns) ?? (tallies[2] as string), dim: true }])
+  if (input.rank !== undefined) lines.push(rankLine(rankOf(input.rank.points, persona, input.rank.saved), persona, columns, mode))
   lines.push([{ text: '─'.repeat(Math.max(1, Math.min(columns, 48))), dim: true }])
 
   for (const key of keys) {
     const c = CREW[key]
     if (c === undefined) continue
     const entry = entries[key]
-    const st = statusOf(key, entry, frame)
-    const color = legible(c.color)
+    const st = statusOf(key, entry, frame, mode)
+    const color = tint(c.key, mode)
     const model = modelLabel(MODELS[key] ?? '')
     const task = entry?.status === 'running' && entry.task !== '' ? entry.task : ''
+    const figures = statsLine(key, stats[key], top === key, columns, 3, mode)
     if (columns >= WIDE_PANE) {
       lines.push([
         { text: `${c.emoji} ` },
@@ -428,8 +672,6 @@ export function rosterLines(input: RosterInput): Line[] {
         { text: pad(st.word, 12), color: st.color },
         ...(task === '' ? [] : [{ text: task, dim: true }]),
       ])
-      const q = quoteLine(key, entry, 3)
-      if (q !== undefined) lines.push(q)
     } else if (columns >= MEDIUM) {
       lines.push([
         { text: `${c.emoji} ` },
@@ -441,8 +683,6 @@ export function rosterLines(input: RosterInput): Line[] {
         { text: st.word, color: st.color },
         ...(task === '' ? [] : [{ text: ` · ${task}`, dim: true }]),
       ])
-      const q = quoteLine(key, entry, 3)
-      if (q !== undefined) lines.push(q)
     } else {
       lines.push([
         { text: `${c.emoji} ` },
@@ -450,9 +690,10 @@ export function rosterLines(input: RosterInput): Line[] {
         { text: ` ${st.glyph} `, color: st.color },
         { text: st.word, color: st.color },
       ])
-      const q = quoteLine(key, entry, 3)
-      if (q !== undefined) lines.push(q)
     }
+    if (figures !== undefined) lines.push(figures)
+    const q = quoteLine(key, entry, 3, mode)
+    if (q !== undefined) lines.push(q)
   }
   return lines.map(l => clipLine(l, columns))
 }
@@ -460,6 +701,251 @@ export function rosterLines(input: RosterInput): Line[] {
 /** The roster as plain text (for a surface or a moment that cannot place the pane). */
 export function rosterText(input: RosterInput): string {
   return rosterLines({ ...input, columns: Math.max(input.columns, WIDE_PANE) })
+    .map(l => l.map(s => s.text).join('').trimEnd())
+    .join('\n')
+}
+
+// --- mission report ----------------------------------------------------------------------------------------------
+
+export type RecapInput = {
+  persona: string | null
+  stats: Readonly<Record<string, DojoCrewStats>>
+  usage: DojoUsage | null
+  /** Rank points; none when the rank toggle is off. */
+  rank?: DojoRank
+  columns: number
+  mode?: PaletteMode
+}
+
+const SCROLL_CAP = 56
+
+/** What a mission report is made of, before it is laid out. */
+function recapFacts(input: Pick<RecapInput, 'persona' | 'stats' | 'usage'>) {
+  const deployed = Object.keys(CREW).filter(k => (input.stats[k]?.runs ?? 0) > 0)
+  const runs = deployed.reduce((n, k) => n + (input.stats[k]?.runs ?? 0), 0)
+  const fell = deployed.reduce((n, k) => n + (input.stats[k]?.fell ?? 0), 0)
+  const kind: 'empty' | 'rough' | 'clean' = deployed.length === 0 ? 'empty' : fell > 0 ? 'rough' : 'clean'
+  const signoffs = (input.persona === null ? undefined : RECAP_SIGNOFFS[input.persona]) ?? (RECAP_SIGNOFFS.strategist as (typeof RECAP_SIGNOFFS)[string])
+  return { deployed, runs, fell, kind, signoff: signoffs[kind] }
+}
+
+function usageFigures(usage: DojoUsage | null): string {
+  if (usage === null || (usage.percent === null && usage.usd === null)) return 'context and cost: not measured yet'
+  const ctx = usage.percent === null ? 'context —' : `context ${clampPercent(usage.percent)}%`
+  return usage.usd === null ? ctx : `${ctx} · cost $${usage.usd.toFixed(2)}`
+}
+
+/** The mission report as lines, set between two scroll rolls; every line inside `columns`. */
+export function recapLines(input: RecapInput): Line[] {
+  const { persona, stats, columns } = input
+  const mode = input.mode ?? 'dark'
+  const theme = (persona === null ? undefined : STRATEGISTS[persona]) ?? NEUTRAL
+  const color = tint(theme.key, mode)
+  const facts = recapFacts(input)
+  const span = Math.max(4, Math.min(columns, SCROLL_CAP))
+  const roll = (title: string): Line => {
+    const left = title === '' ? '◖' : `◖═ ${title} `
+    return [{ text: `${left}${'═'.repeat(Math.max(1, span - cellWidth(left) - 1))}◗`, color, bold: true }]
+  }
+  const lines: Line[] = [roll('📜 Mission report')]
+  lines.push(
+    persona === null || STRATEGISTS[persona] === undefined
+      ? [{ text: 'No strategist on duty', dim: true }]
+      : [{ text: `${theme.emoji} ${theme.name} on duty`, color, bold: true }],
+  )
+
+  if (facts.kind === 'empty') {
+    lines.push([{ text: 'No crew deployed this session.', dim: true }])
+  } else {
+    lines.push([{ text: `Deployed: ${facts.deployed.length} of ${Object.keys(CREW).length} crew · ${facts.runs} ${facts.runs === 1 ? 'run' : 'runs'}` }])
+    for (const key of facts.deployed) {
+      const c = CREW[key]
+      const st = stats[key]
+      if (c === undefined || st === undefined) continue
+      const head: Line = [{ text: `${c.emoji} ` }, { text: c.name, color: tint(c.key, mode), bold: true }]
+      const room = columns - (3 + cellWidth(c.name))
+      const forms = statForms(st)
+      const form = forms.find(f => cellWidth(f) <= room) ?? clip(forms[2], Math.max(1, room))
+      lines.push([...head, { text: ` ${form}`, dim: true }])
+      const said = st.says
+      const outcome = st.fell > 0 ? `fell ×${st.fell}` : ''
+      if (outcome !== '') lines.push([{ text: `   ${outcome}`, color: 'error' }])
+      if (said !== undefined) lines.push([{ text: `   “${said}”`, color: tint(c.key, mode), italic: true }])
+    }
+    lines.push([{ text: `Fallen: ${facts.fell}`, ...(facts.fell > 0 ? { color: 'error' } : {}) }])
+  }
+
+  lines.push([{ text: `Final ${usageFigures(input.usage)}`, dim: input.usage === null }])
+  if (input.rank !== undefined) lines.push(rankLine(rankOf(input.rank.points, persona, input.rank.saved), persona, columns, mode))
+  lines.push([{ text: `${theme.emoji} “${facts.signoff}”`, color, italic: true }])
+  lines.push(roll(''))
+  return lines.map(l => clipLine(l, columns))
+}
+
+/** The report as plain text. */
+export function recapText(input: RecapInput): string {
+  return recapLines({ ...input, columns: Math.max(input.columns, SCROLL_CAP) })
+    .map(l => l.map(s => s.text).join('').trimEnd())
+    .join('\n')
+}
+
+// --- gallery -----------------------------------------------------------------------------------------------------
+
+export type GalleryInput = { index: number; columns: number; mode?: PaletteMode }
+
+/** The theme of a gallery key: a strategist, the neutral one or a crew member. */
+export function galleryTheme(key: string): Theme {
+  return STRATEGISTS[key] ?? CREW[key] ?? NEUTRAL
+}
+
+/** Gallery page `index` wrapped into range, as a character key. */
+export function galleryKey(index: number): string {
+  const n = GALLERY_ORDER.length
+  return GALLERY_ORDER[((Math.trunc(Number.isFinite(index) ? index : 0) % n) + n) % n] as string
+}
+
+const BORDERS: Record<string, readonly [string, string, string, string, string, string]> = {
+  round: ['╭', '╮', '╰', '╯', '─', '│'],
+  single: ['┌', '┐', '└', '┘', '─', '│'],
+  double: ['╔', '╗', '╚', '╝', '═', '║'],
+  bold: ['┏', '┓', '┗', '┛', '━', '┃'],
+}
+
+/** Words wrapped to `width` cells; a word longer than the width is cut. */
+export function wrapWords(text: string, width: number): string[] {
+  const out: string[] = []
+  let cur = ''
+  for (const word of text.split(/\s+/).filter(w => w !== '')) {
+    const w = cellWidth(word) > width ? clip(word, width) : word
+    if (cur === '') cur = w
+    else if (cellWidth(cur) + 1 + cellWidth(w) <= width) cur += ` ${w}`
+    else {
+      out.push(cur)
+      cur = w
+    }
+  }
+  if (cur !== '') out.push(cur)
+  return out
+}
+
+const LABEL = 9
+
+/** A speech bubble around `text`, the tail beside its middle row; plain quoted text when there is no room for a frame. */
+function bubble(key: string, text: string, columns: number, color: string): Line[] {
+  const shape = BUBBLES[key] ?? { borderStyle: 'round', tail: '<' }
+  const [tl, tr, bl, br, h, v] = BORDERS[shape.borderStyle] ?? (BORDERS.round as NonNullable<(typeof BORDERS)[string]>)
+  const inner = Math.min(36, columns - LABEL - 4)
+  const label = (s: string) => ({ text: pad(s, LABEL), dim: true })
+  if (inner < 8) return [[label('Says'), { text: `“${text}”`, color, italic: true }]]
+  const rows = wrapWords(text, inner)
+  const width = Math.max(...rows.map(cellWidth))
+  const mid = Math.floor(rows.length / 2)
+  const out: Line[] = [[label('Says'), { text: `${tl}${h.repeat(width + 2)}${tr}`, color }]]
+  rows.forEach((r, i) => {
+    const prefix = i === mid ? shape.tail.padStart(LABEL) : ' '.repeat(LABEL)
+    out.push([{ text: prefix, color }, { text: `${v} `, color }, { text: pad(r, width), color, italic: true }, { text: ` ${v}`, color }])
+  })
+  out.push([{ text: ' '.repeat(LABEL) + `${bl}${h.repeat(width + 2)}${br}`, color }])
+  return out
+}
+
+/** The banner of `key` when it fits `columns`, as lines in the character's color. */
+function bannerLines(key: string, columns: number, color: string): Line[] {
+  const rows = BANNERS[key] ?? NEUTRAL_BANNER
+  const width = Math.max(...rows.map(r => r.length))
+  if (rows.length > BANNER_ROWS || width > BANNER_COLUMNS || width > columns) return []
+  return rows.map(r => [{ text: r, color }])
+}
+
+/** How many of `items` fit on a line of `room` cells, joined by `sep`; the rest become `+N`. */
+function listFit(items: readonly string[], room: number, sep: string): string {
+  for (let n = items.length; n > 0; n--) {
+    const shown = items.slice(0, n).join(sep)
+    const text = n === items.length ? shown : `${shown}${sep}+${items.length - n}`
+    if (cellWidth(text) <= room) return text
+  }
+  return `+${items.length}`
+}
+
+/** One page of the gallery: a character's banner, colors in both palettes, spinner words, lines and a Says bubble. */
+export function galleryLines(input: GalleryInput): Line[] {
+  const { columns } = input
+  const mode = input.mode ?? 'dark'
+  const total = GALLERY_ORDER.length
+  const key = galleryKey(input.index)
+  const theme = galleryTheme(key)
+  const isCrew = CREW[key] !== undefined
+  const color = tint(theme.key, mode)
+  const room = Math.max(1, columns - LABEL)
+  const label = (s: string): Seg => ({ text: pad(s, LABEL), dim: true })
+  const row = (name: string, ...segs: Seg[]): Line => [label(name), ...segs]
+  const said = (text: string): Seg => ({ text: `“${text}”`, color, italic: true })
+  const lines: Line[] = []
+
+  const pos = `${((GALLERY_ORDER as readonly string[]).indexOf(key) + 1)}/${total}`
+  lines.push([
+    { text: `${theme.emoji} ` },
+    { text: theme.name, color, bold: true },
+    { text: ` · ${theme.role}`, dim: true },
+    { text: `  ${pos}`, dim: true },
+  ])
+  lines.push(...bannerLines(key, columns, color))
+  lines.push([{ text: ' ' }])
+
+  // colors: the primary and accent, as drawn in each palette
+  for (const m of ['dark', 'light'] as const) {
+    const primary = tint(theme.key, m)
+    const accent = accentFor(theme.key, m)
+    lines.push(
+      row(
+        m === 'dark' ? 'Colors' : '',
+        { text: pad(m, 6) },
+        { text: '██', color: primary },
+        { text: ` ${primary} `, dim: true },
+        { text: '██', color: accent },
+        { text: ` ${accent}`, dim: true },
+        ...(m === mode ? [{ text: ' ◂', dim: true }] : []),
+      ),
+    )
+  }
+
+  const words = WORDS[key] ?? WORDS.strategist
+  const verbs = [...(words?.verbs ?? []), ...(VERBS_MORE[key] ?? [])]
+  lines.push(row('Frames', { text: framesOf(key).join(' '), color }))
+  lines.push(row('Verbs', { text: listFit(verbs, room, ' · ') }))
+
+  if (isCrew) {
+    const deploy = [words?.deploy ?? '', ...(DEPLOY_MORE[key] ?? [])].filter(l => l !== '')
+    if (deploy[0] !== undefined) lines.push(row('Deploy', said(deploy[0])))
+    const back = RETURN_LINES[key]?.[0]
+    if (back !== undefined) lines.push(row('Return', said(back)))
+    const fall = FALL_LINES[key]
+    if (fall !== undefined) lines.push(row('Fallen', said(fall)))
+  } else {
+    lines.push(row('Turn end', { text: listFit([...(words?.done ?? []), ...(TURN_LONG[key] ?? [])], room, ' · ') }))
+    const header = BAND_HEADER[key]
+    if (header !== undefined) lines.push(row('Band', { text: header.full.replace('{n}', '2'), color }))
+    const hint = HINTS[key]?.idle[0]
+    if (hint !== undefined) lines.push(row('Hint', said(hint)))
+    lines.push(
+      row(
+        'Usage',
+        { text: `${USAGE_LABELS.context} ` },
+        { text: usageBar(58, USAGE_BAR.cells, key), color },
+        { text: ' 58%' },
+      ),
+    )
+    const ladder = RANK_LADDERS[key]
+    if (ladder !== undefined) lines.push(row('Ranks', { text: listFit(ladder.map((n, i) => `${n} ${RANK_STEPS[i]}`), room, ' · ') }))
+  }
+
+  lines.push(...bubble(key, SAYS_SAMPLES[key] ?? '', columns, color))
+  return lines.map(l => clipLine(l, columns))
+}
+
+/** The current gallery page as plain text. */
+export function galleryText(input: GalleryInput): string {
+  return galleryLines({ ...input, columns: Math.max(input.columns, 64) })
     .map(l => l.map(s => s.text).join('').trimEnd())
     .join('\n')
 }

@@ -5,22 +5,30 @@ import { isOn } from '../lib/options'
 import type { Installer, Options } from '../lib/options'
 import { crewKey, strategistKey } from '../lib/persona'
 import { summarizeTool } from '../lib/text'
-import { CREW, FELL_EMOJI, NEUTRAL, STRATEGISTS, WORDS } from '../theme'
-import type { Theme, Words } from '../theme'
-import type { DojoBand, DojoCrewRow, DojoRosterEntry, DojoUsage } from '../state'
-import { CUE_GAP_MS, DEPLOY_MORE, SOUNDS } from './chrome-art'
+import { CREW, FELL_EMOJI, NEUTRAL, STRATEGISTS, WORDS, resolveMode } from '../theme'
+import type { PaletteMode, Theme, Words } from '../theme'
+import type { DojoBand, DojoCrewRow, DojoCrewStats, DojoRank, DojoRosterEntry, DojoRun, DojoUsage } from '../state'
+import { CUE_GAP_MS, DEPLOY_MORE, GALLERY_ORDER, RANK_STORE_KEY, SOUNDS } from './chrome-art'
 import type { Cue } from './chrome-art'
 import {
+  addStats,
   deployLine,
   framesOf,
+  galleryLines,
+  galleryText,
   hintTail,
   parseSays,
   planBand,
   planUsage,
+  rankOf,
+  rankUpText,
+  recapLines,
+  recapText,
   rosterLines,
   rosterText,
   snapshotUsage,
   themedModes,
+  tokensOf,
   turnWord,
   verbAt,
 } from './chrome-lib'
@@ -36,9 +44,15 @@ const voice = atom({ plugin: 'dojo', key: 'voice' } as const, null)
 const band = atom({ plugin: 'dojo', key: 'band' } as const, { frame: 0, rows: [] } as DojoBand)
 const tools = atom({ plugin: 'dojo', key: 'tools' } as const, {} as Record<string, string>)
 const roster = atom({ plugin: 'dojo', key: 'roster' } as const, {} as Record<string, DojoRosterEntry>)
+const runs = atom({ plugin: 'dojo', key: 'runs' } as const, {} as Record<string, DojoRun>)
 const pulse = atom({ plugin: 'dojo', key: 'pulse' } as const, 0)
 const cueAt = atom({ plugin: 'dojo', key: 'cueAt' } as const, null as number | null)
 const usage = atom({ plugin: 'dojo', key: 'usage' } as const, null as DojoUsage | null)
+const stats = atom({ plugin: 'dojo', key: 'stats' } as const, {} as Record<string, DojoCrewStats>)
+const rank = atom({ plugin: 'dojo', key: 'rank' } as const, null as DojoRank | null)
+const gallery = atom({ plugin: 'dojo', key: 'gallery' } as const, 0)
+// written here (session start, theme or setting change), read by the transcript module too
+const paletteMode = atom({ plugin: 'dojo', key: 'paletteMode' } as const, 'dark' as PaletteMode)
 
 const TICK_MS = 250
 const PULSE_MS = 400
@@ -47,6 +61,13 @@ const VERB_EVERY = 12
 // pulses with no spinner drawn before the pulse timer stops itself
 const PULSE_IDLE = 3
 const PANE_ID = 'dojo-roster'
+const RECAP_ID = 'dojo-recap'
+const GALLERY_ID = 'dojo-gallery'
+const COMMANDS = [
+  { name: 'dojo', description: 'Open the dojo roster: strategist on duty, crew, models and status' },
+  { name: 'dojo-recap', description: 'Open the mission report: who was deployed, what fell, final context and cost, rank' },
+  { name: 'dojo-gallery', description: 'Browse the dojo characters: banner, colors, spinner words and lines' },
+] as const
 const TERMINAL = new Set(['completed', 'failed', 'killed'])
 
 // Module variables die with a hot reload; everything a drawing reads lives in $.state.
@@ -169,6 +190,21 @@ function foldRoster(prev: Record<string, DojoRosterEntry>, groups: ReadonlyMap<s
   return out
 }
 
+/** Keeps a start time and a token count for each running crew id: new ids start now, ended ones go. */
+async function trackRuns($: Engine, ids: readonly string[]) {
+  const held = await read($, runs)
+  const live = new Set(ids)
+  const isStale = Object.keys(held).some(id => !live.has(id))
+  const isFresh = ids.some(id => held[id] === undefined)
+  if (!isStale && !isFresh) return
+  const now = await $.clock.now()
+  await update($, runs, r => {
+    const next: Record<string, DojoRun> = {}
+    for (const id of ids) next[id] = r[id] ?? { startedAt: now, tokens: 0 }
+    return next
+  })
+}
+
 async function tick($: Engine, options: Options) {
   const crew = (await $.agent.list()).filter(a => crewKey(a.type) !== null)
   const rows: DojoCrewRow[] = []
@@ -209,19 +245,106 @@ async function tick($: Engine, options: Options) {
     }
   }
   if (finished.length > 0) await cue($, options, finished.some(f => !f.ok) ? 'fall' : 'return')
+  if (finished.length > 0 && isOn(options, 'rosterPane')) {
+    try {
+      await update($, stats, s => finished.reduce((t, f) => addStats(t, f.key, f.ok ? { returned: 1 } : { fell: 1 }), s))
+    } catch {
+      // the figures are a garnish
+    }
+  }
+  await awardRank($, options, finished.filter(f => f.ok).length)
 
   if (rows.length === 0) {
     timer?.cancel()
     timer = undefined
   }
   if (!isOn(options, 'band')) return
+  await trackRuns($, rows.map(r => r.id))
   await update($, band, b =>
     rows.length === 0 && b.rows.length === 0 ? b : { frame: rows.length === 0 ? 0 : b.frame + 1, rows },
   )
 }
 
+/** The palette for the engine theme and the `paletteMode` setting; `changed` is a row being written right now. */
+async function syncMode($: Engine, options: Options, changed?: { key: string; value: unknown }) {
+  let theme: unknown
+  let setting: unknown = options.paletteMode
+  try {
+    const rows = await $.config.list()
+    theme = rows.find(r => r.key === 'theme')?.value
+    const mine = rows.find(r => r.key === 'dojo.paletteMode')
+    if (mine !== undefined) setting = mine.value
+  } catch {
+    // no config rows to read: the option and the dark default stand
+  }
+  if (changed !== undefined) {
+    if (changed.key === 'theme') theme = changed.value
+    else setting = changed.value
+  }
+  const next = resolveMode(setting, theme)
+  await update($, paletteMode, () => next)
+}
+
+const pointsOf = (stored: unknown): number => {
+  const p = typeof stored === 'object' && stored !== null ? (stored as { points?: unknown }).points : undefined
+  return typeof p === 'number' && Number.isFinite(p) && p > 0 ? Math.floor(p) : 0
+}
+
+/** The rank points: held in state once loaded from the plugin store. Writes state, so never call it while drawing. */
+async function loadRank($: Engine): Promise<DojoRank> {
+  const held = await read($, rank)
+  if (held !== null) return held
+  let first: DojoRank
+  try {
+    first = { points: pointsOf(await $.store.get(RANK_STORE_KEY)), saved: true }
+  } catch {
+    // no store: the points live in this session only, and say so
+    first = { points: 0, saved: false }
+  }
+  return (await update($, rank, r => r ?? first)) ?? first
+}
+
+/** The rank points for a drawing: state when loaded, else read from the store without writing state. */
+async function peekRank($: Engine, options: Options): Promise<DojoRank | undefined> {
+  if (!isOn(options, 'rank')) return undefined
+  const held = await read($, rank)
+  if (held !== null) return held
+  try {
+    return { points: pointsOf(await $.store.get(RANK_STORE_KEY)), saved: true }
+  } catch {
+    return { points: 0, saved: false }
+  }
+}
+
+/** Adds `wins` returned crew to the points, saves them and toasts a new rung in the strategist's voice. */
+async function awardRank($: Engine, options: Options, wins: number) {
+  if (wins <= 0 || !isOn(options, 'rank')) return
+  try {
+    const before = await loadRank($)
+    const grown = (r: DojoRank | null): DojoRank => {
+      const cur = r ?? before
+      return { points: cur.points + wins, saved: cur.saved }
+    }
+    const after = (await update($, rank, grown)) ?? grown(null)
+    if (after.saved) {
+      try {
+        await $.store.set(RANK_STORE_KEY, { points: after.points })
+      } catch {
+        await update($, rank, r => (r === null ? r : { ...r, saved: false }))
+      }
+    }
+    if (isOn(options, 'toasts')) {
+      const persona = await personaKey($)
+      const now = rankOf(after.points, persona)
+      if (now.index > rankOf(after.points - wins, persona).index) $.ui.toast(rankUpText(now, persona))
+    }
+  } catch {
+    // the rank is a garnish
+  }
+}
+
 function ensureTick($: Engine, options: Options) {
-  const wanted = ['band', 'toasts', 'sounds', 'rosterPane'].some(name => isOn(options, name))
+  const wanted = ['band', 'toasts', 'sounds', 'rosterPane', 'rank'].some(name => isOn(options, name))
   if (timer !== undefined || !wanted) return
   timer = $.clock.every(TICK_MS, () => {
     tick($, options).catch(() => {})
@@ -229,14 +352,45 @@ function ensureTick($: Engine, options: Options) {
 }
 
 /** What the roster pane (and its text fallback) is drawn from. */
-async function rosterInput($: Engine, columns: number) {
+async function rosterInput($: Engine, options: Options, columns: number) {
+  const points = await peekRank($, options)
   return {
     persona: await personaKey($),
     voice: await read($, voice),
     entries: await read($, roster),
     frame: (await read($, band)).frame,
     columns,
+    mode: await read($, paletteMode),
+    stats: await read($, stats),
+    ...(points === undefined ? {} : { rank: points }),
   }
+}
+
+/** What the mission report is drawn from; the usage atom, or the session's own figures before the first measure. */
+async function recapInput($: Engine, options: Options, columns: number) {
+  let figures = await read($, usage)
+  if (figures === null) {
+    try {
+      figures = snapshotUsage(await $.session.usage())
+    } catch {
+      figures = null
+    }
+  }
+  const points = await peekRank($, options)
+  return {
+    persona: await personaKey($),
+    stats: await read($, stats),
+    usage: figures,
+    columns,
+    mode: await read($, paletteMode),
+    ...(points === undefined ? {} : { rank: points }),
+  }
+}
+
+/** Opens a pane for a command; a pane that cannot be placed answers with `text` instead. */
+async function openPane($: Engine, spec: { id: string; title: string; rows: number }, text: () => Promise<string>) {
+  const opened = await $.ui.open({ ...spec, focus: true, closeOnEscape: true })
+  return opened.isPlaced ? {} : { text: await text() }
 }
 
 export const installChrome: Installer = (on, options) => {
@@ -256,6 +410,7 @@ export const installChrome: Installer = (on, options) => {
           }))
           nth = table[key]?.count ?? 1
         }
+        if (isOn(options, 'rosterPane')) await update($, stats, s => addStats(s, key, { runs: 1 }))
         if (c !== undefined && isOn(options, 'toasts')) {
           $.ui.toast(`${c.emoji} ${c.name} deployed — "${deployLine(key, nth, DEPLOY_MORE[key] ?? [])}"`)
         }
@@ -263,6 +418,12 @@ export const installChrome: Installer = (on, options) => {
         ensureTick($, options)
         if (isOn(options, 'band')) {
           const id = ran.agentId
+          try {
+            const startedAt = await $.clock.now()
+            await update($, runs, r => ({ ...r, [id]: { startedAt, tokens: 0 } }))
+          } catch {
+            // no start time: the row shows no elapsed figure until the tick notes one
+          }
           await update($, band, b => ({
             ...b,
             rows: [...b.rows.filter(r => r.id !== id), { id, key, description: e.description }],
@@ -278,12 +439,31 @@ export const installChrome: Installer = (on, options) => {
   // What a crew member said last: the `Says:` line of its report.
   on('turn.complete', { reason: 'answer' }, async ($, e, next) => {
     const ran = await next(e)
+    if (e.agentId !== undefined && isOn(options, 'band')) {
+      try {
+        const id = e.agentId
+        const total = tokensOf(e.usage)
+        if (total > 0) {
+          await update($, runs, r => {
+            const cur = r[id]
+            return cur === undefined || cur.tokens >= total ? r : { ...r, [id]: { ...cur, tokens: total } }
+          })
+        }
+      } catch {
+        // the token figure is a garnish
+      }
+    }
     if (e.agentId !== undefined && (isOn(options, 'rosterPane') || isOn(options, 'toasts'))) {
       try {
         const says = parseSays(e.answer)
         const id = e.agentId
         const agent = (await $.agent.list()).find(a => a.id === id)
         const key = agent === undefined ? null : crewKey(agent.type)
+        if (key !== null && CREW[key] !== undefined && isOn(options, 'rosterPane')) {
+          const ms = Number.isFinite(e.durationMs) && e.durationMs > 0 ? e.durationMs : 0
+          const tokens = tokensOf(e.usage)
+          if (ms > 0 || tokens > 0 || says !== undefined) await update($, stats, s => addStats(s, key, { ms, tokens, ...(says === undefined ? {} : { says }) }))
+        }
         if (says !== undefined && key !== null) {
           await update($, roster, r => ({
             ...r,
@@ -305,6 +485,26 @@ export const installChrome: Installer = (on, options) => {
       ensureTick($, options)
     }
     return next(e)
+  })
+
+  // What a crew member has spent so far: each of its model requests adds its tokens to the run. The main loop passes.
+  on('turn.step', async function* ($, e, next) {
+    const out = yield* next(e)
+    if (e.agentId !== undefined && isOn(options, 'band')) {
+      try {
+        const id = e.agentId
+        const spent = tokensOf(out.usage)
+        if (spent > 0) {
+          await update($, runs, r => {
+            const cur = r[id]
+            return cur === undefined ? r : { ...r, [id]: { ...cur, tokens: cur.tokens + spent } }
+          })
+        }
+      } catch {
+        // the token figure is a garnish
+      }
+    }
+    return out
   })
 
   on('ui.render', { component: 'Spinner' }, async ($, e, next) => {
@@ -387,6 +587,7 @@ export const installChrome: Installer = (on, options) => {
     let tree: RenderElement | undefined
     try {
       const persona = await personaKey($)
+      const mode = await read($, paletteMode)
       const columns = e.props.bodyColumns
       const bandState = wantBand ? await read($, band) : undefined
       const crewOut = bandState !== undefined && bandState.rows.length > 0
@@ -394,7 +595,7 @@ export const installChrome: Installer = (on, options) => {
       let usageRow: Line | undefined
       if (wantUsage && !(crewOut && e.props.maxRows < 2)) {
         try {
-          usageRow = planUsage({ persona, usage: (await read($, usage)) ?? snapshotUsage(await $.session.usage()), columns })
+          usageRow = planUsage({ persona, usage: (await read($, usage)) ?? snapshotUsage(await $.session.usage()), columns, mode })
         } catch {
           usageRow = undefined
         }
@@ -402,14 +603,31 @@ export const installChrome: Installer = (on, options) => {
       let lines: Line[] = usageRow === undefined ? [] : [usageRow]
       if (bandState !== undefined && crewOut) {
         const latest = await read($, tools)
+        const held = await read($, runs)
+        let now: number | undefined
+        try {
+          now = await $.clock.now()
+        } catch {
+          now = undefined
+        }
         lines = [
           ...lines,
           ...planBand({
             persona,
-            rows: bandState.rows.map(r => ({ key: r.key, description: r.description, tool: latest[r.id] })),
+            rows: bandState.rows.map(r => {
+              const run = held[r.id]
+              return {
+                key: r.key,
+                description: r.description,
+                tool: latest[r.id],
+                ...(run === undefined || now === undefined ? {} : { elapsedMs: Math.max(0, now - run.startedAt) }),
+                ...(run === undefined || run.tokens <= 0 ? {} : { tokens: run.tokens }),
+              }
+            }),
             frame: bandState.frame,
             columns,
             maxRows: e.props.maxRows - lines.length,
+            mode,
           }),
         ]
       }
@@ -448,50 +666,118 @@ export const installChrome: Installer = (on, options) => {
     return modes === undefined ? next(e) : next({ ...e, props: { ...e.props, modes } })
   })
 
-  // /dojo opens the roster pane. Commands can only be registered once an interactive session binds.
+  // /dojo, /dojo-recap and /dojo-gallery open panes. Commands can only be registered once an interactive session binds.
   on('session.start', { isInteractive: true }, async ($, e, next) => {
     if (isOn(options, 'rosterPane')) {
-      try {
-        await $.command.register({ name: 'dojo', description: 'Open the dojo roster: strategist on duty, crew, models and status' })
-      } catch {
-        // a name taken or refused: the other commands still stand
+      for (const spec of COMMANDS) {
+        try {
+          await $.command.register(spec)
+        } catch {
+          // a name taken or refused: the other commands still stand
+        }
       }
     }
+    try {
+      await syncMode($, options)
+      if (isOn(options, 'rank')) await loadRank($)
+    } catch {
+      // the dark palette and a rank loaded on first use stand
+    }
     return next(e)
+  })
+
+  // The palette follows the engine theme (and the setting): re-resolved when either is written.
+  on('config.set', { key: ['theme', 'dojo.paletteMode'] }, async ($, e, next) => {
+    const ran = await next(e)
+    if (ran.deny === undefined) {
+      try {
+        await syncMode($, options, { key: e.key, value: e.value })
+      } catch {
+        // the palette stays as it was
+      }
+    }
+    return ran
   })
 
   on('command.run', { command: 'dojo' }, async ($, e, next) => {
     if (!isOn(options, 'rosterPane')) return next(e)
     try {
-      const opened = await $.ui.open({ id: PANE_ID, title: 'Dojo roster', focus: true, closeOnEscape: true, rows: 22 })
-      if (opened.isPlaced) return {}
-      return { text: rosterText(await rosterInput($, e.presentation.columns)) }
+      return await openPane($, { id: PANE_ID, title: 'Dojo roster', rows: 22 }, async () =>
+        rosterText(await rosterInput($, options, e.presentation.columns)),
+      )
     } catch {
       return next(e)
     }
   })
 
-  on('ui.render', { component: 'Pane', requestId: 'dojo-roster' }, async ($, e, next) => {
+  on('command.run', { command: 'dojo-recap' }, async ($, e, next) => {
+    if (!isOn(options, 'rosterPane')) return next(e)
+    try {
+      return await openPane($, { id: RECAP_ID, title: 'Mission report', rows: 18 }, async () =>
+        recapText(await recapInput($, options, e.presentation.columns)),
+      )
+    } catch {
+      return next(e)
+    }
+  })
+
+  on('command.run', { command: 'dojo-gallery' }, async ($, e, next) => {
+    if (!isOn(options, 'rosterPane')) return next(e)
+    try {
+      return await openPane($, { id: GALLERY_ID, title: 'Dojo gallery', rows: 26 }, async () =>
+        galleryText({ index: await read($, gallery), columns: e.presentation.columns, mode: await read($, paletteMode) }),
+      )
+    } catch {
+      return next(e)
+    }
+  })
+
+  // One hook for the three dojo panes: the roster, the mission report and the gallery.
+  on('ui.render', { component: 'Pane', requestId: /^dojo-(roster|recap|gallery)$/ }, async ($, e, next) => {
     if (!isOn(options, 'rosterPane')) return next(e)
     let tree: RenderElement | undefined
     try {
-      const lines = rosterLines(await rosterInput($, e.props.bodyColumns))
+      const columns = e.props.bodyColumns
+      const mode = await read($, paletteMode)
+      const isGallery = e.requestId === GALLERY_ID
+      const lines =
+        e.requestId === RECAP_ID
+          ? recapLines(await recapInput($, options, columns))
+          : isGallery
+            ? galleryLines({ index: await read($, gallery), columns, mode })
+            : rosterLines(await rosterInput($, options, columns))
+      const id = e.requestId
       const { Box, Text, Button } = $.ui.resolve(e)
-      tree = (
+      const closePane = () => {
+        $.ui.close({ id }).catch(() => {})
+      }
+      const close = <Button key="close" label="close" hotkey="q" onPress={closePane} />
+      const step = (by: number) => {
+        update($, gallery, n => (((n + by) % GALLERY_ORDER.length) + GALLERY_ORDER.length) % GALLERY_ORDER.length).catch(() => {})
+      }
+      const note = (text: string) => (
+        <Text dimColor wrap="truncate-end">
+          {text}
+        </Text>
+      )
+      // the gallery page is taller than the pane: its keys sit on top, the arrows scroll the rest
+      tree = isGallery ? (
         <Box flexDirection="column">
-          {lines.map((l, i) => drawLine(Text, l, `roster-${i}`))}
+          {lines.slice(0, 1).map((l, i) => drawLine(Text, l, `pane-${i}`))}
+          <Box gap={1}>
+            <Button key="prev" label="< prev (p)" hotkey="p" onPress={() => step(-1)} />
+            <Button key="next" label="next (n)" hotkey="n" onPress={() => step(1)} />
+            <Button key="close" label="close (q)" hotkey="q" onPress={closePane} />
+            {note('↑↓ scroll')}
+          </Box>
+          {lines.slice(1).map((l, i) => drawLine(Text, l, `pane-${i + 1}`))}
+        </Box>
+      ) : (
+        <Box flexDirection="column">
+          {lines.map((l, i) => drawLine(Text, l, `pane-${i}`))}
           <Box marginTop={1} gap={1}>
-            <Button
-              key="close"
-              label="close"
-              hotkey="q"
-              onPress={() => {
-                $.ui.close({ id: PANE_ID }).catch(() => {})
-              }}
-            />
-            <Text dimColor wrap="truncate-end">
-              esc closes
-            </Text>
+            {close}
+            {note('esc closes')}
           </Box>
         </Box>
       )

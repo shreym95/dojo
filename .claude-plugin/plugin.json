@@ -1,7 +1,7 @@
 {
   "name": "dojo",
-  "description": "Anime-themed subagents: a strategist orchestrator plus backend, frontend, research, QA and docs crew, each with its own model, tools and voice. Includes optional visuals (themed spinners, crew band, toasts, transcript theme, banners, roster pane, sounds) and guards (model, commit message, delegation budgets, compaction memory).",
-  "version": "0.5.1",
+  "description": "Anime-themed subagents: a strategist orchestrator plus backend, frontend, research, QA and docs crew, each with its own model, tools and voice. Includes optional visuals (themed spinners, crew band, toasts, transcript theme, banners, roster pane, mission report, gallery, rank, sounds) and guards (model, commit message, delegation budgets, compaction memory).",
+  "version": "0.6.0",
   "author": {
     "name": "shreym95",
     "url": "https://github.com/shreym95"
@@ -126,6 +126,19 @@
       "type": "boolean",
       "title": "Sound cues",
       "description": "Play a sound cue when a dojo subagent is deployed, returns or fails.",
+      "default": true
+    },
+    "paletteMode": {
+      "type": "string",
+      "title": "Color palette",
+      "description": "Colors of the dojo chrome and transcript. auto follows the Claude Code theme (light when its name contains \"light\"); dark and light force one.",
+      "default": "auto",
+      "options": ["auto", "dark", "light"]
+    },
+    "rank": {
+      "type": "boolean",
+      "title": "Crew rank",
+      "description": "Keep a rank that grows with every dojo crew member that returns, across sessions. Shown in /dojo and /dojo-recap, with a toast on rank-up.",
       "default": true
     }
   },

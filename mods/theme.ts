@@ -7,15 +7,19 @@ export type Theme = {
   name: string
   role: string
   emoji: string
-  /** Primary color of the character: text, frames, badges. */
+  /** Primary color of the character as authored (text, frames, badges); `colorFor` is what gets drawn. */
   color: string
-  /** Secondary color: borders, highlights, dim detail. */
+  /** Secondary color as authored (borders, highlights, dim detail); `accentFor` is what gets drawn. */
   accent: string
+  /** `color` for light terminal themes: same hue, at least 4.5:1 on white. */
+  lightColor: string
+  /** `accent` for light terminal themes: same hue, at least 4.5:1 on white. */
+  lightAccent: string
 }
 
 export const STRATEGISTS: Record<string, Theme> = {
-  shikamaru: { key: 'shikamaru', name: 'Shikamaru', role: 'strategist', emoji: '🦌', color: '#5B8C5A', accent: '#A3B18A' },
-  lelouch: { key: 'lelouch', name: 'Lelouch', role: 'strategist', emoji: '♟️', color: '#6A0DAD', accent: '#D4AF37' },
+  shikamaru: { key: 'shikamaru', name: 'Shikamaru', role: 'strategist', emoji: '🦌', color: '#5B8C5A', accent: '#A3B18A', lightColor: '#538052', lightAccent: '#6C7B52' },
+  lelouch: { key: 'lelouch', name: 'Lelouch', role: 'strategist', emoji: '♟️', color: '#6A0DAD', accent: '#D4AF37', lightColor: '#6A0DAD', lightAccent: '#8C721E' },
 }
 
 /** Used when no persona is detected (and DOJO_STRATEGIST is unset). */
@@ -26,15 +30,70 @@ export const NEUTRAL: Theme = {
   emoji: '🎴',
   color: '#94A3B8',
   accent: '#CBD5E1',
+  lightColor: '#627793',
+  lightAccent: '#5A789D',
 }
 
 export const CREW: Record<string, Theme> = {
-  senku: { key: 'senku', name: 'Senku', role: 'backend', emoji: '🧪', color: '#8BC34A', accent: '#00BCD4' },
-  sanji: { key: 'sanji', name: 'Sanji', role: 'frontend', emoji: '🍳', color: '#F4C430', accent: '#1E3A8A' },
-  l: { key: 'l', name: 'L', role: 'deep research', emoji: '🍰', color: '#E0E0E0', accent: '#6B7280' },
-  light: { key: 'light', name: 'Light', role: 'quick fact', emoji: '📓', color: '#B22222', accent: '#9CA3AF' },
-  levi: { key: 'levi', name: 'Levi', role: 'QA', emoji: '🧹', color: '#708090', accent: '#2F4F4F' },
-  robin: { key: 'robin', name: 'Robin', role: 'docs', emoji: '🌸', color: '#E07AA5', accent: '#4B3B6B' },
+  senku: { key: 'senku', name: 'Senku', role: 'backend', emoji: '🧪', color: '#8BC34A', accent: '#00BCD4', lightColor: '#59812B', lightAccent: '#008192' },
+  sanji: { key: 'sanji', name: 'Sanji', role: 'frontend', emoji: '🍳', color: '#F4C430', accent: '#1E3A8A', lightColor: '#937108', lightAccent: '#1E3A8A' },
+  l: { key: 'l', name: 'L', role: 'deep research', emoji: '🍰', color: '#E0E0E0', accent: '#6B7280', lightColor: '#4D4D4D', lightAccent: '#6B7280' },
+  light: { key: 'light', name: 'Light', role: 'quick fact', emoji: '📓', color: '#B22222', accent: '#9CA3AF', lightColor: '#B22222', lightAccent: '#6C7586' },
+  levi: { key: 'levi', name: 'Levi', role: 'QA', emoji: '🧹', color: '#708090', accent: '#2F4F4F', lightColor: '#687786', lightAccent: '#2F4F4F' },
+  robin: { key: 'robin', name: 'Robin', role: 'docs', emoji: '🌸', color: '#E07AA5', accent: '#4B3B6B', lightColor: '#D13A7A', lightAccent: '#4B3B6B' },
+}
+
+export type PaletteMode = 'dark' | 'light'
+
+const everyone = (): Theme[] => [...Object.values(STRATEGISTS), NEUTRAL, ...Object.values(CREW)]
+
+const themeOf = (key: string): Theme => everyone().find(t => t.key === key) ?? NEUTRAL
+
+const channel = (v: number) => {
+  const c = v / 255
+  return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+}
+
+function luminance(hex: string): number {
+  const n = parseInt(hex.slice(1), 16)
+  return 0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255)
+}
+
+/** The hex lightened toward white until it holds 4.5:1 against a black terminal; light colors come back as given. */
+export function legible(hex: string): string {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return hex
+  const n = parseInt(hex.slice(1), 16)
+  const rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+  for (let t = 0; t <= 1.0001; t += 0.05) {
+    const mixed = rgb.map(c => Math.round(c + (255 - c) * t))
+    const out = '#' + mixed.map(c => c.toString(16).padStart(2, '0')).join('').toUpperCase()
+    if (luminance(out) >= 0.18) return out
+  }
+  return '#FFFFFF'
+}
+
+/**
+ * The primary color of character `key` for `mode`; an unknown key gets the neutral strategist's. Dark is the authored
+ * color lifted until it reads at 4.5:1 on black (`legible`); light is the character's own light-terminal color.
+ */
+export function colorFor(key: string, mode: PaletteMode): string {
+  const t = themeOf(key)
+  return mode === 'light' ? t.lightColor : legible(t.color)
+}
+
+/** The accent color of character `key` for `mode`, lifted for dark the way `colorFor` is; an unknown key gets the neutral strategist's. */
+export function accentFor(key: string, mode: PaletteMode): string {
+  const t = themeOf(key)
+  return mode === 'light' ? t.lightAccent : legible(t.accent)
+}
+
+/**
+ * The palette to draw with. `setting` is the userConfig `paletteMode` (`auto`, `dark` or `light`); `auto`, or anything
+ * else, follows the engine theme: light when its name contains "light", dark otherwise.
+ */
+export function resolveMode(setting: unknown, engineTheme: unknown): PaletteMode {
+  if (setting === 'dark' || setting === 'light') return setting
+  return typeof engineTheme === 'string' && engineTheme.toLowerCase().includes('light') ? 'light' : 'dark'
 }
 
 export const FELL_EMOJI = '💀'

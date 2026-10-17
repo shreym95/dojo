@@ -73,15 +73,19 @@ Built on Claude Code's function hooks (early-access API), the dojo plugin includ
 
 - **Themed spinners**: the main thread's spinner word comes from the on-duty strategist (Shikamaru: "Shadow-possessing", "Reading the board"; Lelouch: "Commanding", "Geass-ing"). A crew member's own spinner gets its emoji and verbs (🧪 Senku "Science-ing", 🧹 Levi "Scrubbing", 🌸 Robin "Deciphering"...). Verbs rotate per turn.
 - **Turn-end flair**: the line that closes a turn says "Outmaneuvered" (Shikamaru) or "Checkmated" (Lelouch).
-- **Crew band**: while any `dojo:*` subagent runs, one row each above the prompt: emoji, name, an animated frame, its task and its latest tool call (`Bash: npm test`). Gone when nobody is running.
-- **Session usage line**: one row above the prompt that shows where the session is heading: `🦌 Chakra ▰▰▰▰▰▰▱▱▱▱ 58% · Stamina 23% (5h) · 両 $1.42`. Chakra is the context window's fill, Stamina the busiest rate-limit window (subscriptions only), and the last figure the session cost. The bar takes the strategist's color, turns to the warning color from 60% and to the error color from 85%, where a short line from the strategist is added. A segment with no data is left out, and under 50 columns the row shrinks to `🦌 ▰▰▰▱ 58% · 23%`. The crew band draws below it.
+- **Crew band**: while any `dojo:*` subagent runs, one row each above the prompt showing the animated glyph, emoji, name, task, short tool name, and right-aligned elapsed time and live tokens (input+output, cache excluded). Gone when nobody is running. The row shrinks on narrow terminals. Claude Code's own agent list below the prompt is drawn by the engine and cannot be hidden or restyled by a plugin, so it still shows alongside the band.
+- **Session usage line**: one row above the prompt that shows where the session is heading. The bar shape follows the strategist: Shikamaru shows `≋∙` (density wave), Lelouch `♞⋅` (knight), neutral `▰▱` (block). Example: `🦌 Chakra ≋≋≋≋≋≋∙∙∙∙ 58% · Stamina 23% (5h) · 両 $1.42`. Chakra is the context window's fill, Stamina the busiest rate-limit window (subscriptions only), and the last figure the session cost. The bar color turns to warning from 60% and error from 85%, where a short line from the strategist is added. A segment with no data is left out; under 50 columns the row shrinks to `🦌 ≋≋≋∙ 58% · 23%`.
+- **Palette mode**: light-theme colors meet ≥4.5:1 contrast on white; dark colors are lifted to ≥4.5:1 on black and applied across spinners, crew band, transcript, and all chrome.
 - **Transcript theme**: persona frames on messages, tool badges, crew cards and speech bubbles in the on-duty character's colors.
 - **ASCII banners**: shown when a dojo subagent is deployed and when it returns.
 - **Prompt chrome**: themed prompt area with persona hints under the prompt and session mode labels.
-- **Roster pane**: `/dojo` shows the crew, who is on duty and who is running.
+- **Roster pane**: `/dojo` shows the crew, who is on duty and who is running, with per-crew session stats (runs, time, tokens, most-deployed badge at ≥2 runs) and rank line.
+- **Mission report**: `/dojo-recap` shows crew deployed, runs, time, tokens, last `Says:` line, who fell, final context and cost, rank, and the strategist's sign-off. Command only.
+- **Gallery**: `/dojo-gallery` previews each character's banner, colors (dark/light variants), animation frames, spinner verbs, signature lines, and sample speech bubble. Navigate with `p`/`n`, close with `q` or Esc.
+- **Rank across sessions**: a rank that grows with every dojo crew member that returns. Shikamaru/neutral use Genin / Chūnin / Jōnin / Kage; Lelouch uses Pawn / Knight / Rook / King. Thresholds: 0 / 25 / 100 / 300 points. Stored in Claude Code's plugin store; falls back to "(this session)" if unavailable. Toast on rank-up.
 - **Deploy/return toasts and sounds**: `🧹 Levi deployed — "Chi. Show me the mess."`, then `🧹 Levi returned` or `💀 Levi fell`. Sound cues play on macOS only (via `afplay`).
 
-Toggle features in `/config` (or `pluginConfigs` in settings): `spinners`, `turnFlair`, `band`, `usageLine`, `toasts`, `neutralMainTheme`, `transcriptTheme`, `banners`, `promptChrome`, `rosterPane`, `sounds`, all on by default.
+Toggle features in `/config` (or `pluginConfigs` in settings): `spinners`, `turnFlair`, `band`, `usageLine`, `toasts`, `neutralMainTheme`, `transcriptTheme`, `banners`, `promptChrome`, `rosterPane`, `sounds`, `paletteMode`, `rank`, all on by default except `paletteMode` which is `auto`.
 
 ## Guards and gates
 
@@ -95,6 +99,8 @@ Toggle features in `/config` (or `pluginConfigs` in settings): `spinners`, `turn
 - `/dojo-duty [shikamaru|lelouch]`: Show or switch the strategist persona on duty. The choice survives compaction and resume in the same process; a resume in a new process starts from the persona picked at session start.
 - `/dojo-voice [subtle|medium|full|default|reset|off]`: Show or set the dojo voice level override for this session; overrides pass to agents spawned until cleared.
 - `/dojo`: Open the roster pane (requires `rosterPane` toggle on).
+- `/dojo-recap`: Open the mission report: who was deployed, what fell, final context and cost, rank (requires `rosterPane` toggle on).
+- `/dojo-gallery`: Browse the dojo characters: banner, colors, spinner words and lines (requires `rosterPane` toggle on).
 
 ## Settings
 
@@ -120,6 +126,8 @@ Every setting below lives in the `userConfig` section of the plugin and can be t
 | `promptChrome` | true | Theme the prompt area: persona hints under the prompt and the session mode line. |
 | `rosterPane` | true | Show the /dojo roster panel: the crew, who is on duty and who is running. |
 | `sounds` | true | Play a sound cue when a dojo subagent is deployed, returns or falls (macOS only). |
+| `paletteMode` | `auto` | Colors of the dojo chrome and transcript. `auto` follows the Claude Code theme (light when its name contains "light"); `dark` and `light` force one. Light-theme colors meet ≥4.5:1 on white; dark colors are lifted to ≥4.5:1 on black. |
+| `rank` | true | Keep a rank that grows with every dojo crew member that returns, across sessions. Shown in `/dojo` and `/dojo-recap`, with a toast on rank-up. Ladder: Shikamaru/neutral (Genin / Chūnin / Jōnin / Kage), Lelouch (Pawn / Knight / Rook / King); thresholds 0 / 25 / 100 / 300 points. |
 
 ## Note
 

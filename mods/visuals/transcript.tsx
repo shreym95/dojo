@@ -5,7 +5,7 @@ import { isOn } from '../lib/options'
 import type { Installer, Options } from '../lib/options'
 import { crewKey, strategistKey } from '../lib/persona'
 import { CREW, FELL_EMOJI, NEUTRAL, STRATEGISTS } from '../theme'
-import type { Theme } from '../theme'
+import type { PaletteMode, Theme } from '../theme'
 import { ASKS, BUBBLES, COMMAND_TITLES, DEPLOY_LINES, ERROR_MARKS, FALLEN_LINES, MOTIFS, RETURN_LINES } from './transcript-art'
 import {
   FALLEN_STATUSES,
@@ -20,6 +20,8 @@ import {
   dutyNameOf,
   extractSays,
   line,
+  modeOf,
+  paint,
   remember,
   rule,
   statsLine,
@@ -35,23 +37,31 @@ const strategist = atom({ plugin: 'dojo', key: 'strategist' } as const, null)
 const callers = atom({ plugin: 'dojo', key: 'callers' } as const, {} as Record<string, string>)
 /** tool_use_id of an Agent call -> the crew key it spawns, or `-` for any other agent type. */
 const spawns = atom({ plugin: 'dojo', key: 'spawns' } as const, {} as Record<string, string>)
+/** The palette in force; the chrome module writes it. Dark until it says otherwise. */
+const paletteMode = atom({ plugin: 'dojo', key: 'paletteMode' } as const, 'dark' as PaletteMode)
 
 type UI = { Box: ElementConstructor<BoxProps>; Text: ElementConstructor<TextProps> }
 type CardState = 'deployed' | 'returned' | 'fell' | 'recalled' | 'background'
 
 const motifOf = (key: string) => MOTIFS[key] ?? (MOTIFS.strategist as (typeof MOTIFS)[string])
 
+/** `t` with its colors resolved for the palette in force. Every color this module draws comes from here. */
+async function painted($: Engine, t: Theme): Promise<Theme> {
+  return paint(t, modeOf(await read($, paletteMode)))
+}
+
 async function mainTheme($: Engine, options: Options): Promise<Theme | null> {
   const key = (await read($, strategist)) ?? strategistKey(await $.env.get('DOJO_STRATEGIST'))
-  if (key !== null) return STRATEGISTS[key] ?? null
-  return isOn(options, 'neutralMainTheme') ? NEUTRAL : null
+  const t = key !== null ? (STRATEGISTS[key] ?? null) : isOn(options, 'neutralMainTheme') ? NEUTRAL : null
+  return t === null ? null : painted($, t)
 }
 
 /** Who made tool call `id`: a crew member's theme, the strategist's, or null for a subagent that is no dojo crew. */
 async function callerTheme($: Engine, options: Options, id: string): Promise<Theme | null> {
   const lane = (await read($, callers))[id]
   if (lane === undefined) return mainTheme($, options)
-  return lane === '-' ? null : (CREW[lane] ?? null)
+  const t = lane === '-' ? null : (CREW[lane] ?? null)
+  return t === null ? null : painted($, t)
 }
 
 /** A one-cell-wide stripe in `color`, as tall as what stands beside it. */
@@ -299,8 +309,9 @@ export const installTranscript: Installer = (on, options) => {
       const who = await callerTheme($, options, p.tool_use_id)
       const row = who === null ? base : badged(ui, [who], cols, p.isErrored, base)
       const spawned = p.tool === 'Agent' ? crewOfInput(p.input) : null
-      const crew = spawned === null ? undefined : CREW[spawned]
-      if (crew === undefined) return row
+      const crewBase = spawned === null ? undefined : CREW[spawned]
+      if (crewBase === undefined) return row
+      const crew = await painted($, crewBase)
       const state: CardState = p.isErrored ? 'fell' : p.isInterrupted ? 'recalled' : 'deployed'
       const card = crewCard(ui, {
         theme: crew,
@@ -334,8 +345,9 @@ export const installTranscript: Installer = (on, options) => {
         const lane = (await read($, spawns))[p.tool_use_id]
         let key = lane !== undefined && lane !== '-' ? lane : null
         if (lane === undefined && facts.agentType !== null) key = crewKey(facts.agentType)
-        const crew = key === null ? undefined : CREW[key]
-        if (crew !== undefined) {
+        const crewBase = key === null ? undefined : CREW[key]
+        if (crewBase !== undefined) {
+          const crew = await painted($, crewBase)
           let fell = p.isErrored || (facts.status !== null && FALLEN_STATUSES.has(facts.status))
           if (!fell && facts.agentId !== null) {
             try {
@@ -391,8 +403,9 @@ export const installTranscript: Installer = (on, options) => {
       const who: Theme[] = []
       for (const call of e.props.calls) {
         const lane = call.tool_use_id === undefined ? undefined : lanes[call.tool_use_id]
-        const t = lane === undefined ? main : lane === '-' ? null : (CREW[lane] ?? null)
-        if (t !== null && !who.includes(t)) who.push(t)
+        const known = lane === undefined || lane === '-' ? null : (CREW[lane] ?? null)
+        const t = lane === undefined ? main : known === null ? null : await painted($, known)
+        if (t !== null && !who.some(w => w.key === t.key)) who.push(t)
       }
       if (who.length === 0) return base
       return badged(ui, who, cols, e.props.calls.some(c => c.isErrored), base)
@@ -425,7 +438,8 @@ export const installTranscript: Installer = (on, options) => {
       if (command === 'dojo-duty') {
         const named = dutyNameOf(e.props.text, Object.keys(STRATEGISTS))
         if (named !== null) {
-          t = STRATEGISTS[named] ?? t
+          const picked = STRATEGISTS[named]
+          t = picked === undefined ? t : await painted($, picked)
           art = named
         }
       }
